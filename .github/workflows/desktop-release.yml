@@ -36,3 +36,24 @@ jobs:
           name: style-shelf-${{ matrix.os }}
           path: release/*
           if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: style-shelf-*
+          path: release
+          merge-multiple: true
+      - name: Create release and attach installers
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Style Shelf $GITHUB_REF_NAME" \
+            --generate-notes
