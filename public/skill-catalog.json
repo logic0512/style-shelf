@@ -181,7 +181,7 @@
     "name": "heytea-doodle-poster",
     "english": "HEYTEA-DOODLE-POSTER",
     "summaryZh": "物件涂鸦海报，适合生活照片与日常物件。",
-    "desc": "把日常生活照片转成以真实物件、留白、原始黑线小人物和儿童手写字为核心的竖版物件涂鸦海报。该 Skill 不随 App 复制，需先按作者页面在 Codex 安装。",
+    "desc": "把日常生活照片转成以真实物件、留白、原始黑线小人物和儿童手写字为核心的竖版物件涂鸦海报。个人非商业版随包附上 Skill，并保留作者来源与再分发限制。",
     "mode": "mixed",
     "modeLabel": "图片 + 文字",
     "scenes": ["物件海报", "生活照片"],
@@ -201,10 +201,10 @@
       { "id": "direction", "type": "textarea", "label": "你的想法（可选）", "required": false, "placeholder": "写下主题、文字或希望强调的物件" }
     ],
     "order": 6,
-    "distribution": "external",
+    "distribution": "bundled",
     "author": "Beav",
     "sourceUrl": "https://beav.ziz.hk/skills/heytea",
-    "license": "No explicit redistribution license found"
+    "license": "个人非商业维护者随包；上游再分发许可未核验"
   },
   {
     "id": "vinyl-image-generator",

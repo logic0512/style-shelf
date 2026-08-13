@@ -10,7 +10,8 @@ relicensed by Style Shelf. Follow each original license and source notice.
 
 The cover thumbnails in `public/skill-assets/` are maintainer-provided outputs
 created through the corresponding Skill. They were not copied from the
-upstream repositories.
+upstream repositories. The default package is a free personal/non-commercial
+bundle; this does not change any upstream license or grant commercial rights.
 
 ## Included in the App
 
@@ -64,19 +65,19 @@ upstream repositories.
 - License: MIT.
 - Included license: [`bundled-skills/vinyl-image-generator/LICENSE`](bundled-skills/vinyl-image-generator/LICENSE)
 
-## Catalog Card Only — Not Bundled
-
 ### heytea-doodle-poster
 
 - Author: [Beav](https://beav.ziz.hk/)
 - Original source / installation page: [beav.ziz.hk/skills/heytea](https://beav.ziz.hk/skills/heytea)
-- Distribution status: the public author page is available, but no explicit redistribution license was found on 2026-08-13. Style Shelf therefore includes only a compatibility card and a maintainer-generated cover, not the Skill files.
-- Installation: ask Codex to install the Skill from the author's page, then return to Style Shelf's **Add Skill** panel to find and add the local Skill.
+- Distribution status: included in the free personal/non-commercial package as a maintainer-local copy. No explicit upstream redistribution license was verified on 2026-08-13.
+- Included notice: [`bundled-skills/heytea-doodle-poster/REDISTRIBUTION-NOTICE.md`](bundled-skills/heytea-doodle-poster/REDISTRIBUTION-NOTICE.md)
+- Private reference assets from the local installation are intentionally excluded. This is not an official HEYTEA package and does not grant commercial redistribution rights.
 
 ## Release Boundary
 
-Because the default App includes non-commercial Skills, the complete default
+Because the default App includes non-commercial Skills and one local copy whose
+upstream redistribution permission was not verified, the complete default
 bundle is for free personal/non-commercial use. The Style Shelf core remains
-MIT, but removing or replacing restricted Skills is necessary before a
-commercial distribution. This notice is a source and license inventory, not
-legal advice.
+MIT, but removing or replacing restricted Skills and obtaining any required
+author permissions is necessary before a commercial distribution. This notice
+is a source and license inventory, not legal advice.

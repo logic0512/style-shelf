@@ -8,6 +8,8 @@ Style Shelf 把喜欢的生图 Skill 变成可视、可搜索、可直接运行�
 
 Style Shelf turns image-generation Skills into visual, searchable, directly runnable style cards. It is a standalone desktop workbench, but it does not bundle a cloud model: real image generation requires either a working local Codex runtime or WorkBuddy configured with an image model.
 
+> **发布边界 / Release boundary**：默认安装包是免费个人非商业版。第三方 Skill 仍受各自许可和来源说明约束；不得将完整默认包用于商业产品、收费服务、客户项目或付费交付。Style Shelf 核心代码仍为 MIT，详见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+
 ---
 
 ## 中文
@@ -70,7 +72,7 @@ npm run desktop                # Electron 开发启动
 
 ### 默认风格
 
-首版展示 8 张默认风格卡，但只有 7 个 Skill 文件随 App 分发。`heytea-doodle-poster` 未找到明确的再分发许可，因此只保留来源卡片和工作台自有封面，用户需要先按作者页面安装，再回工作台导入。
+首版展示并随个人非商业版附带 8 张默认风格卡。`heytea-doodle-poster` 是维护者本地副本；上游没有可核验的明确再分发许可，因此仅限本免费个人非商业包使用，并保留作者来源和移除/授权要求。
 
 | Skill | 分发状态 | 许可摘要 |
 | --- | --- | --- |
@@ -80,10 +82,18 @@ npm run desktop                # Electron 开发启动
 | `gc-minimal-zine-poster-v0-1` | 随 App | MIT |
 | `scene-distillation-zine-v1-3` | 随 App | 个人非商业 |
 | `scenes-gathered-zine-v1-3` | 随 App | 个人非商业 |
-| `heytea-doodle-poster` | 仅卡片，不随包 | 未找到明确再分发许可 |
+| `heytea-doodle-poster` | 随个人非商业版 | 上游许可未核验；保留作者来源与限制 |
 | `vinyl-image-generator` | 随 App | MIT |
 
-完整默认包含有非商业 Skill，因此当前整包只适合免费个人／非商业使用。Style Shelf 核心代码是 MIT，但第三方 Skill 仍保留各自许可。详见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+完整默认包只适合免费个人／非商业使用。Style Shelf 核心代码是 MIT，但第三方 Skill 仍保留各自许可；`heytea-doodle-poster` 不包含其本地私有参考资产，也不代表作者授权商业再分发。详见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+
+### 界面预览
+
+下面是工作台的实际界面截图，数据仅用于展示布局，不会作为用户 Job 或图库内容写入安装包。
+
+![风格仓库 / Style Shelf](docs/images/style-shelf-gallery.png)
+
+![图库 / Gallery](docs/images/style-shelf-results.png)
 
 ### 本地存储与隐私
 
@@ -164,7 +174,7 @@ npm run desktop
 
 ### Default styles
 
-The first release shows eight default cards. Seven Skill packages are bundled. `heytea-doodle-poster` has no verified redistribution license, so the app ships only its source card and a maintainer-owned cover; install the Skill from the author's page, then import it into Style Shelf.
+The first release shows and bundles eight default Skill cards in the free personal/non-commercial package. `heytea-doodle-poster` is a maintainer-local copy: no explicit upstream redistribution license was verified, so it is restricted to this personal/non-commercial package, keeps the author/source link, and excludes private reference assets.
 
 | Skill | Distribution | License summary |
 | --- | --- | --- |
@@ -174,10 +184,18 @@ The first release shows eight default cards. Seven Skill packages are bundled. `
 | `gc-minimal-zine-poster-v0-1` | Bundled | MIT |
 | `scene-distillation-zine-v1-3` | Bundled | Personal non-commercial |
 | `scenes-gathered-zine-v1-3` | Bundled | Personal non-commercial |
-| `heytea-doodle-poster` | Catalog card only | No explicit redistribution license found |
+| `heytea-doodle-poster` | Bundled for personal/non-commercial use | Upstream redistribution permission not verified; source and restrictions retained |
 | `vinyl-image-generator` | Bundled | MIT |
 
-Because the complete default bundle contains non-commercial Skills, it is currently intended only for free personal/non-commercial use. The Style Shelf core is MIT-licensed; third-party Skills retain their own licenses. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Because the complete default bundle contains non-commercial Skills, it is intended only for free personal/non-commercial use. The Style Shelf core is MIT-licensed; third-party Skills retain their own licenses. The heytea bundle is not an official HEYTEA package and grants no commercial redistribution rights. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+### Interface preview
+
+These screenshots show the actual Style Shelf layout. Their data is for documentation only and is not shipped as user Job or gallery data.
+
+![Style Shelf](docs/images/style-shelf-gallery.png)
+
+![Gallery](docs/images/style-shelf-results.png)
 
 ### Local storage and privacy
 

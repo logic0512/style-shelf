@@ -64,6 +64,15 @@
       "sourceRef": "main",
       "license": "MIT",
       "licenseFile": "LICENSE"
+    },
+    {
+      "id": "heytea-style",
+      "directory": "heytea-doodle-poster",
+      "author": "Beav",
+      "source": "https://beav.ziz.hk/skills/heytea",
+      "sourceRef": "maintainer-local-copy",
+      "license": "Personal non-commercial maintainer bundle; upstream redistribution permission not verified",
+      "licenseFile": "REDISTRIBUTION-NOTICE.md"
     }
   ]
 }

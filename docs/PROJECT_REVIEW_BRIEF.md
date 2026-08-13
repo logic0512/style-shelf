@@ -54,7 +54,7 @@ npm run start
 
 ### 4.1 风格仓库
 
-- 展示 8 张默认风格卡；其中 7 个 Skill 随 App 分发，`heytea-doodle-poster` 仅提供来源与安装提示。当前清单以 `public/skill-catalog.json` 和 `bundled-skills/manifest.json` 为准。
+- 展示并随个人非商业版分发 8 张默认风格卡；`heytea-doodle-poster` 是维护者本地副本，来源与限制见 `bundled-skills/heytea-doodle-poster/REDISTRIBUTION-NOTICE.md`。当前清单以 `public/skill-catalog.json` 和 `bundled-skills/manifest.json` 为准。
 - 每个 Skill 是一张独立风格卡片。
 - 卡片输入要求来自 Skill 的 `inputSchema`，不是全局固定表单。
 - 卡片可以进入图片转绘、文字生图、图片+文字混合或引导式生成。

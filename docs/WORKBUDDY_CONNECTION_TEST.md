@@ -11,7 +11,7 @@
 - macOS、Windows、Linux 任一系统，Node.js 20.19+ 或 22.12+。
 - WorkBuddy/CodeBuddy 已安装，并且可以在终端启动本地 HTTP 服务。
 - 如果只做本阶段连接检查，不需要配置生图模型；需要实际出图时，才在 WorkBuddy 中配置模型供应商、API 地址、API Key 和模型名。密钥只放在 WorkBuddy 的配置中，不要写入 Style Shelf 仓库、`.env`、Job 或结果 JSON。
-- 当前机器上的 Codex Skill 目录可以没有这些内置 Skill；Style Shelf 的 `bootstrap` 会把仓库内 7 个“缺失的”随包 Skill 种入 `CODEX_HOME/skills`，不会覆盖已有 Skill。第 8 张 `heytea-doodle-poster` 卡片只提供来源与安装提示，不复制 Skill 文件。
+- 当前机器上的 Codex Skill 目录可以没有这些内置 Skill；Style Shelf 的 `bootstrap` 会把仓库内 8 个“缺失的”随包 Skill 种入 `CODEX_HOME/skills`，不会覆盖已有 Skill。`heytea-doodle-poster` 是个人非商业版附带的维护者本地副本，保留作者来源和 `REDISTRIBUTION-NOTICE.md` 限制。
 
 ## 2. 安装并启动 Style Shelf
 
@@ -36,7 +36,7 @@ curl -fsS http://127.0.0.1:4317/api/storage
 
 - `/api/health` 返回 `ok: true`。
 - `/api/storage` 返回 `Uploads` 和 `Generated` 两个用户可见目录。
-- `npm run bootstrap` 输出 `Bundled Skills: N installed · M already present`，其中 `N + M = 7`。
+- `npm run bootstrap` 输出 `Bundled Skills: N installed · M already present`，其中 `N + M = 8`。
 - 浏览器可以打开 <http://127.0.0.1:4173>。`4317` 是源码模式的 API 端口，不是页面端口。
 
 如果使用 Electron 开发模式，也可以执行：
@@ -70,7 +70,7 @@ curl -fsS http://127.0.0.1:8080/api/v1/health
 1. 读取仓库中的 bundled-skills/manifest.json；
 2. 确认 bundled-skills/photo-abstract-editorial/SKILL.md 存在；
 3. 请求 http://127.0.0.1:4317/api/health 和 /api/storage；
-4. 返回仓库绝对路径、Style Shelf API 返回的 dataDir/libraryDir、7 个随包 Skill ID；
+4. 返回仓库绝对路径、Style Shelf API 返回的 dataDir/libraryDir、8 个随包 Skill ID；
 5. 不要输出任何 API Key、Cookie 或认证密码。
 ```
 
@@ -183,7 +183,7 @@ This guide checks whether WorkBuddy can access the Style Shelf repository, image
 - macOS, Windows, or Linux with Node.js `20.19+` or `22.12+`.
 - WorkBuddy/CodeBuddy installed and able to start a local HTTP service.
 - An image API is not required for the connection check. Real generation requires text-to-image and image-to-image providers configured inside WorkBuddy.
-- `npm run bootstrap` seeds the seven missing bundled Skills into `CODEX_HOME/skills` without overwriting existing Skills. The eighth card, `heytea-doodle-poster`, provides a source and installation prompt only; its Skill files are not bundled.
+- `npm run bootstrap` seeds the eight missing bundled Skills into `CODEX_HOME/skills` without overwriting existing Skills. `heytea-doodle-poster` is included only in the free personal/non-commercial package as a maintainer-local copy; retain its source and redistribution notice.
 
 ### 2. Start Style Shelf from source
 
@@ -202,7 +202,7 @@ curl -fsS http://127.0.0.1:4317/api/health
 curl -fsS http://127.0.0.1:4317/api/storage
 ```
 
-Expected results: `/api/health` returns `ok: true`; `/api/storage` returns the visible `Uploads` and `Generated` folders; bootstrap reports `N + M = 7`; the UI opens at <http://127.0.0.1:4173>.
+Expected results: `/api/health` returns `ok: true`; `/api/storage` returns the visible `Uploads` and `Generated` folders; bootstrap reports `N + M = 8`; the UI opens at <http://127.0.0.1:4173>.
 
 The packaged Electron app selects an available API port dynamically. Do not assume port `4317` for the desktop app; use its **Diagnostics** panel.
 
@@ -237,7 +237,7 @@ It does **not** claim validated end-to-end image generation through a third-part
 
 ### 6. Read-only connection check
 
-Ask WorkBuddy to read `bundled-skills/manifest.json`, confirm one bundled `SKILL.md`, request the source-mode `/api/health` and `/api/storage` endpoints, and return the seven bundled Skill IDs. It must not print API keys, cookies, or authentication passwords.
+Ask WorkBuddy to read `bundled-skills/manifest.json`, confirm one bundled `SKILL.md`, request the source-mode `/api/health` and `/api/storage` endpoints, and return the eight bundled Skill IDs. It must not print API keys, cookies, or authentication passwords.
 
 ### 7. Feedback template
 
