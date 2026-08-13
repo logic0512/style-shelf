@@ -1,7 +1,7 @@
 {
   "name": "style-shelf",
   "private": true,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "license": "MIT",
   "description": "Local-first image style Skill workbench",
   "author": "Style Shelf contributors",
