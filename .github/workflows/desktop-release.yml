@@ -1,0 +1,38 @@
+name: Style Shelf desktop artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  package:
+    name: ${{ matrix.os }} desktop package
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            command: dist:mac:universal
+          - os: windows-latest
+            command: dist:win
+          - os: ubuntu-latest
+            command: dist:linux
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.x
+          cache: npm
+      - run: npm ci
+      - run: npm run bootstrap
+      - run: npm run check:bundled-licenses
+      - run: npm run ${{ matrix.command }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: style-shelf-${{ matrix.os }}
+          path: release/*
+          if-no-files-found: error

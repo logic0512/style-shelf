@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ink Wash Editorial Poster"
+  short_description: "Turn ideas into minimal contemporary ink-wash posters"
+  default_prompt: "Use $ink-wash-poster to turn this idea into a spacious contemporary ink-wash poster and generate the image."

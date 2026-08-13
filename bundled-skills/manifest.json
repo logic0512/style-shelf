@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Third-party Skills shipped with Style Shelf and seeded into the user's Codex skills directory when missing.",
+  "skills": [
+    {
+      "id": "photo-abstract-editorial",
+      "directory": "photo-abstract-editorial",
+      "author": "ZzzLc0405",
+      "source": "https://github.com/ZzzLc0405/photo-abstract-editorial",
+      "sourceRef": "main",
+      "license": "Personal / educational / research / non-commercial",
+      "licenseFile": "LICENSE.md"
+    },
+    {
+      "id": "ian-xiaohei-illustrations",
+      "directory": "ian-xiaohei-illustrations",
+      "author": "Ian / helloianneo",
+      "source": "https://github.com/helloianneo/ian-xiaohei-illustrations",
+      "sourceRef": "main",
+      "license": "MIT + NOTICE",
+      "licenseFile": "LICENSE"
+    },
+    {
+      "id": "ink-wash-poster",
+      "directory": "ink-wash-poster",
+      "author": "TwentyfiveBTea",
+      "source": "https://github.com/TwentyfiveBTea/ink-wash-poster",
+      "sourceRef": "main",
+      "license": "AGPL-3.0",
+      "licenseFile": "LICENSE"
+    },
+    {
+      "id": "gc-minimal-zine-poster-v0-1",
+      "directory": "gc-minimal-zine-poster-v0-1",
+      "author": "LiamGvchi",
+      "source": "https://github.com/LiamGvchi/gc-minimal-zine-poster",
+      "sourceRef": "v0.1.0",
+      "license": "MIT",
+      "licenseFile": "LICENSE"
+    },
+    {
+      "id": "scene-distillation-zine-v1-3",
+      "directory": "scene-distillation-zine-v1-3",
+      "author": "Zeejay0",
+      "source": "https://github.com/Zeejay0/gathered-scenes-zine-skill/tree/main/skills/scene-distillation-zine-v1-3",
+      "sourceRef": "main",
+      "license": "Gathered Scenes Zine Personal Non-Commercial License",
+      "licenseFile": "LICENSE"
+    },
+    {
+      "id": "scenes-gathered-zine-v1-3",
+      "directory": "scenes-gathered-zine-v1-3",
+      "author": "Zeejay0",
+      "source": "https://github.com/Zeejay0/gathered-scenes-zine-skill/tree/main/skills/scenes-gathered-zine-v1-3",
+      "sourceRef": "main",
+      "license": "Gathered Scenes Zine Personal Non-Commercial License",
+      "licenseFile": "LICENSE"
+    },
+    {
+      "id": "vinyl-image-generator",
+      "directory": "vinyl-image-generator",
+      "author": "liigoQi",
+      "source": "https://github.com/liigoQi/vinyl-image-generator",
+      "sourceRef": "main",
+      "license": "MIT",
+      "licenseFile": "LICENSE"
+    }
+  ]
+}

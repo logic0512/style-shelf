@@ -1,0 +1,27 @@
+name: Style Shelf quality
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  local-web-check:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.x
+          cache: npm
+
+      - run: npm ci
+      - run: npm run setup
+      - run: npm run doctor
+      - run: npm run build
