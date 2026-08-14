@@ -15,6 +15,8 @@
 
 ## 2. 安装并启动 Style Shelf
 
+下面的 `curl` 地址和浏览器地址只适用于从源码启动的 Web 模式。桌面 App 会自动启动窗口，并为本地 API 选择空闲端口；不要在桌面版中假定端口是 `4317`，请使用 App 内的“诊断”面板查看当前连接状态。
+
 在 WorkBuddy 可以访问的终端中执行：
 
 ```bash
@@ -187,6 +189,8 @@ This guide checks whether WorkBuddy can access the Style Shelf repository, image
 
 ### 2. Start Style Shelf from source
 
+The following `curl` and browser addresses apply only to source mode. The packaged desktop app opens its own window and selects an available localhost API port at startup; do not assume `4317` for the desktop app. Use the in-app **Diagnostics** panel to see the active connection.
+
 ```bash
 git clone <Style-Shelf-GitHub-URL>
 cd <Style-Shelf-GitHub-directory>
@@ -202,9 +206,7 @@ curl -fsS http://127.0.0.1:4317/api/health
 curl -fsS http://127.0.0.1:4317/api/storage
 ```
 
-Expected results: `/api/health` returns `ok: true`; `/api/storage` returns the visible `Uploads` and `Generated` folders; bootstrap reports `N + M = 8`; the UI opens at <http://127.0.0.1:4173>.
-
-The packaged Electron app selects an available API port dynamically. Do not assume port `4317` for the desktop app; use its **Diagnostics** panel.
+Expected results: `/api/health` returns `ok: true`; `/api/storage` returns the visible `Uploads` and `Generated` folders; bootstrap reports `N + M = 8`; the source-mode UI opens at <http://127.0.0.1:4173>.
 
 ### 3. Start WorkBuddy
 

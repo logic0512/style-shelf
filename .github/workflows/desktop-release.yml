@@ -44,6 +44,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: style-shelf-*
@@ -62,4 +63,4 @@ jobs:
           gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
             --repo "$GITHUB_REPOSITORY" \
             --title "Style Shelf $GITHUB_REF_NAME" \
-            --generate-notes
+            --notes-file .github/release-notes.md
