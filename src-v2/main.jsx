@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { cancelJob, configureExecutor, continueJob, createJob, createPrompt, deletePrompt, deleteResult, deleteSkill, installSkill, jobArtifactUrl, jobInputUrl, loadDeletedSkills, loadHealth, loadJob, loadJobs, loadLocalSkills, loadPersistedResults, loadPromptCatalog, loadSkillCatalog, loadStorage, restoreSkill, runJob, saveResult, seedResults, updateJob, updatePrompt, uploadJobInput, updateSkill } from './api.js'
+import { LocaleProvider, useI18n } from './i18n.js'
 import './styles.css'
 
 /* ---------------- 数据 ---------------- */
@@ -53,6 +54,7 @@ function matchesSource(value, item) {
 /* ---------------- 卡片视觉：四种独立身份 ---------------- */
 
 function CardVisual({ skill, size = 'card' }) {
+  const { t } = useI18n()
   const cls = size === 'preview' ? 'visual preview' : 'visual'
   if (skill.cover) {
     return (
@@ -65,34 +67,36 @@ function CardVisual({ skill, size = 'card' }) {
   return (
     <div className={`${cls} visual-placeholder visual-needs-sample`}>
       <span className="placeholder-index">{skill.index}</span>
-      <strong>尚无真实样例</strong>
-      <span>先运行一次这个{skill.kind === 'prompt' ? ' Prompt' : ' Skill'}</span>
-      <small>生成后自动填充封面</small>
+      <strong>{t('尚无真实样例')}</strong>
+      <span>{t(skill.kind === 'prompt' ? '先运行一次这个 Prompt' : '先运行一次这个 Skill')}</span>
+      <small>{t('生成后自动填充封面')}</small>
     </div>
   )
 }
 
 function StudioDescription({ skill }) {
-  if (skill.kind === 'prompt') return <p>{skill.summary || '按这个 Prompt 固定风格规则生成。'}</p>
-  if (skill.id !== 'photo-abstract-editorial') return <p>{skill.desc}</p>
+  const { t } = useI18n()
+  if (skill.kind === 'prompt') return <p>{t(skill.summary || '按这个 Prompt 固定风格规则生成。')}</p>
+  if (skill.id !== 'photo-abstract-editorial') return <p>{t(skill.desc)}</p>
   return (
     <div className="studio-description">
-      <p>保留用户照片作为主体，并从照片的空间、色调和构图关系中重建一个克制的抽象记忆面板，形成竖版社论式双联画。适合风景、建筑、人物和空间关系清楚的摄影素材；它不是滤镜，也不会把原图完全重绘。</p>
-      <div className="studio-attributes" aria-label="Skill 属性">
-        <span className="skill-tag">图片转绘</span>
-        <span className="skill-tag">竖版 · 建议 3:5</span>
+      <p>{t('保留用户照片作为主体，并从照片的空间、色调和构图关系中重建一个克制的抽象记忆面板，形成竖版社论式双联画。适合风景、建筑、人物和空间关系清楚的摄影素材；它不是滤镜，也不会把原图完全重绘。')}</p>
+      <div className="studio-attributes" aria-label={t('Skill 属性')}>
+        <span className="skill-tag">{t('图片转绘')}</span>
+        <span className="skill-tag">{t('竖版 · 建议 3:5')}</span>
       </div>
     </div>
   )
 }
 
 function SkillSource({ skill, compact = false }) {
+  const { t } = useI18n()
   if (!skill.sourceUrl) return null
   return (
     <div className={compact ? 'skill-source skill-source-compact' : 'skill-source'}>
-      <span>{compact ? skill.author : `原作者：${skill.author || '查看来源'}`}</span>
-      {!compact && skill.license && <span>许可：{skill.license}</span>}
-      <a href={skill.sourceUrl} target="_blank" rel="noreferrer">{compact ? `作者：${skill.author || '查看来源'} ↗` : '原始来源 ↗'}</a>
+      <span>{compact ? skill.author : `${t('原作者：')}${skill.author || t('查看来源')}`}</span>
+      {!compact && skill.license && <span>{t('许可：')}{skill.license}</span>}
+      <a href={skill.sourceUrl} target="_blank" rel="noreferrer">{compact ? `${t('作者：')}${skill.author || t('查看来源')} ↗` : t('原始来源 ↗')}</a>
     </div>
   )
 }
@@ -814,17 +818,18 @@ function App() {
 }
 
 function Header({ view, latestTask, onView, onLatestTask, storageState, onAddSkill, onAddPrompt, onSettings }) {
+  const { locale, t, toggleLocale } = useI18n()
   return (
     <header className="topbar">
       <div className="brand">
         <div className="brand-text">
           <strong>STYLE SHELF</strong>
-          <small>个人风格工作台</small>
+          <small>{t('个人风格工作台')}</small>
         </div>
       </div>
       <nav className="top-nav" aria-label="主导航">
-        <button className={view === 'shelf' ? 'top-nav-link active' : 'top-nav-link'} onClick={() => onView('shelf')}>风格仓库</button>
-        <button className={view === 'results' ? 'top-nav-link active' : 'top-nav-link'} onClick={() => onView('results')}>图库</button>
+        <button className={view === 'shelf' ? 'top-nav-link active' : 'top-nav-link'} onClick={() => onView('shelf')}>{t('风格仓库')}</button>
+        <button className={view === 'results' ? 'top-nav-link active' : 'top-nav-link'} onClick={() => onView('results')}>{t('图库')}</button>
       </nav>
       <div className="topbar-actions">
         <button
@@ -832,43 +837,45 @@ function Header({ view, latestTask, onView, onLatestTask, storageState, onAddSki
           type="button"
           disabled={!latestTask}
           onClick={onLatestTask}
-          aria-label={latestTask ? `继续上次任务：${latestTask.name}，${latestTask.state === 'running' ? `运行中 ${latestTask.progress}%` : TASK_STATE_LABEL[latestTask.state] || '状态未知'}` : '暂无后台任务'}
+          aria-label={latestTask ? `${t('继续上次任务：')}${latestTask.name}，${latestTask.state === 'running' ? `${t('运行中')} ${latestTask.progress}%` : t(TASK_STATE_LABEL[latestTask.state] || '状态未知')}` : t('暂无后台任务')}
         >
-          <span className="latest-task-title">{latestTask ? `继续：${latestTask.name}` : '暂无最新任务'}</span>
-          <b>{latestTask ? (latestTask.state === 'running' ? `${latestTask.progress}%` : TASK_STATE_LABEL[latestTask.state]) : '暂无'}</b>
+          <span className="latest-task-title">{latestTask ? `${t('继续：')}${latestTask.name}` : t('暂无最新任务')}</span>
+          <b>{latestTask ? (latestTask.state === 'running' ? `${latestTask.progress}%` : t(TASK_STATE_LABEL[latestTask.state])) : t('暂无')}</b>
         </button>
-        <button className="btn-outline" onClick={onAddSkill}>添加 Skill</button>
-        <button className="btn-outline" onClick={onAddPrompt}>添加 Prompt</button>
+        <button className="btn-outline" onClick={onAddSkill}>{t('添加 Skill')}</button>
+        <button className="btn-outline" onClick={onAddPrompt}>{t('添加 Prompt')}</button>
         <span className={`storage-status storage-${storageState}`} title="本地结果存储状态">
-          {storageState === 'ready' ? '本地已连接' : storageState === 'offline' ? '本地未连接' : '检查本地服务'}
+          {storageState === 'ready' ? t('本地已连接') : storageState === 'offline' ? t('本地未连接') : t('检查本地服务')}
         </span>
-        <button className="settings-button" aria-label="诊断" onClick={onSettings}>⚙</button>
+        <button className="locale-toggle" type="button" onClick={toggleLocale} aria-label={locale === 'en' ? '切换为中文' : 'Switch to English'}>{locale === 'en' ? '中' : 'EN'}</button>
+        <button className="settings-button" aria-label={t('诊断')} onClick={onSettings}>⚙</button>
       </div>
     </header>
   )
 }
 
 function Sidebar({ view, setView, resultCount, skillCount, promptCount, onSettings }) {
+  const { t } = useI18n()
   return (
     <aside className="sidebar">
-      <p className="side-label">工作区</p>
+      <p className="side-label">{t('工作区')}</p>
       <nav className="side-nav">
         <button className={view === 'shelf' ? 'side-link active' : 'side-link'} onClick={() => setView('shelf')}>
-          <span className="no">01</span> 风格仓库
+          <span className="no">01</span> {t('风格仓库')}
         </button>
         <button className={view === 'results' ? 'side-link active' : 'side-link'} onClick={() => setView('results')}>
-          <span className="no">02</span> 图库 <b>{resultCount}</b>
+          <span className="no">02</span> {t('图库')} <b>{resultCount}</b>
         </button>
       </nav>
       <div className="side-footer">
         <div className="store-info">
           <span className="store-icon">◧</span>
           <div>
-            <strong>本地资料库</strong>
-            <small>~/StyleShelf · {skillCount} 个 Skill · {promptCount} 个 Prompt</small>
+            <strong>{t('本地资料库')}</strong>
+            <small>~/StyleShelf · {skillCount}{t('个 Skill')} · {promptCount}{t('个 Prompt')}</small>
           </div>
         </div>
-        <button className="settings-link" onClick={onSettings}>诊断</button>
+        <button className="settings-link" onClick={onSettings}>{t('诊断')}</button>
       </div>
     </aside>
   )
@@ -877,6 +884,7 @@ function Sidebar({ view, setView, resultCount, skillCount, promptCount, onSettin
 /* ---------------- 风格仓库（中央主视图） ---------------- */
 
 function ShelfView({ skills, prompts, results, onOpen, onAddPrompt, onEditPrompt, onRemovePrompt, onViewResults, onViewResult, onEditCover, onRemoveSkill, onReorder }) {
+  const { t } = useI18n()
   const [draggingId, setDraggingId] = useState(null)
   const [dragOverId, setDragOverId] = useState(null)
   const [shelfType, setShelfType] = useState('skill')
@@ -890,24 +898,24 @@ function ShelfView({ skills, prompts, results, onOpen, onAddPrompt, onEditPrompt
     <section className="shelf-page page-enter">
       <div className="shelf-intro">
         <div>
-          <h1>我的风格仓库</h1>
-          <p>{shelfType === 'skill' ? '已加入工作台的 Skill，随时进入创作。' : '已保存的 Prompt 模板，随时进入创作。'}</p>
+          <h1>{t('我的风格仓库')}</h1>
+          <p>{shelfType === 'skill' ? t('已加入工作台的 Skill，随时进入创作。') : t('已保存的 Prompt 模板，随时进入创作。')}</p>
         </div>
-        <div className="shelf-count"><strong>{shelfType === 'skill' ? skills.length : prompts.length}</strong><span>个风格</span></div>
+        <div className="shelf-count"><strong>{shelfType === 'skill' ? skills.length : prompts.length}</strong><span>{t('个风格')}</span></div>
       </div>
       <div className="shelf-tabs" role="tablist" aria-label="风格类型">
-        <button type="button" role="tab" aria-selected={shelfType === 'skill'} className={shelfType === 'skill' ? 'active' : ''} onClick={() => setShelfType('skill')}>Skill 风格</button>
-        <button type="button" role="tab" aria-selected={shelfType === 'prompt'} className={shelfType === 'prompt' ? 'active' : ''} onClick={() => setShelfType('prompt')}>Prompt 风格</button>
+        <button type="button" role="tab" aria-selected={shelfType === 'skill'} className={shelfType === 'skill' ? 'active' : ''} onClick={() => setShelfType('skill')}>{t('Skill 风格')}</button>
+        <button type="button" role="tab" aria-selected={shelfType === 'prompt'} className={shelfType === 'prompt' ? 'active' : ''} onClick={() => setShelfType('prompt')}>{t('Prompt 风格')}</button>
       </div>
       {shelfType === 'skill' ? <div className="collection-grid">
         {skills.map((skill) => <SkillCard key={skill.id} skill={skill} isDragging={draggingId === skill.id} isDragOver={dragOverId === skill.id && draggingId !== skill.id} onDragStart={() => setDraggingId(skill.id)} onDragOver={() => setDragOverId(skill.id)} onDrop={() => { onReorder(draggingId, skill.id); clearDrag() }} onDragEnd={clearDrag} onOpen={onOpen} onEditCover={onEditCover} onRemoveSkill={onRemoveSkill} />)}
       </div> : <div className="collection-grid">
         {prompts.map((prompt, index) => <PromptCard key={prompt.id} prompt={{ ...prompt, index: `P.${String(index + 1).padStart(2, '0')}` }} onOpen={onOpen} onEdit={onEditPrompt} onRemove={onRemovePrompt} />)}
-        <button type="button" className="prompt-add-card" onClick={onAddPrompt}><strong>+</strong><span>添加 Prompt</span></button>
+        <button type="button" className="prompt-add-card" onClick={onAddPrompt}><strong>+</strong><span>{t('添加 Prompt')}</span></button>
       </div>}
-      {(shelfType === 'skill' ? skills : prompts).length === 0 && <div className="empty-hint">还没有可用的{ shelfType === 'skill' ? ' Skill' : ' Prompt'}。</div>}
+      {(shelfType === 'skill' ? skills : prompts).length === 0 && <div className="empty-hint">{t('还没有可用的')} {shelfType === 'skill' ? 'Skill' : 'Prompt'}{t('。')}</div>}
       <section className="recent-strip">
-        <div className="recent-heading"><h2>最近作品</h2><button onClick={onViewResults}>查看全部 <span>→</span></button></div>
+        <div className="recent-heading"><h2>{t('最近作品')}</h2><button onClick={onViewResults}>{t('查看全部')} <span>→</span></button></div>
         <div className="recent-row">
           {results.slice(0, 6).map((result) => (
             <button className="recent-work" key={result.id} onClick={() => result.image ? onViewResult(result) : onViewResults()} aria-label={result.image ? `查看${result.title || '作品'}原图` : '打开图库'}>
@@ -921,6 +929,7 @@ function ShelfView({ skills, prompts, results, onOpen, onAddPrompt, onEditPrompt
 }
 
 function SkillCard({ skill, isDragging, isDragOver, onDragStart, onDragOver, onDrop, onDragEnd, onOpen, onEditCover, onRemoveSkill }) {
+  const { t } = useI18n()
   return (
     <article
       className={`skill-card ${isDragging ? 'is-dragging' : ''} ${isDragOver ? 'is-drag-over' : ''}`}
@@ -933,19 +942,19 @@ function SkillCard({ skill, isDragging, isDragOver, onDragStart, onDragOver, onD
     >
       <button className="card-visual" onClick={() => onOpen(skill)} aria-label={`打开 ${skill.name} 的工作区`}>
         <CardVisual skill={skill} />
-        <span className="open-hint">{skill.installed === false ? '需先安装 ↗' : '打开工作区 ↗'}</span>
+        <span className="open-hint">{skill.installed === false ? t('需先安装 ↗') : t('打开工作区 ↗')}</span>
       </button>
       <div className="card-body">
-        <div className="card-names"><h2 title={skill.name} aria-label={skill.name}>{skill.name}</h2><span className="card-usage">{skill.works} 次使用</span></div>
+        <div className="card-names"><h2 title={skill.name} aria-label={skill.name}>{skill.name}</h2><span className="card-usage">{skill.works} {t('次使用')}</span></div>
         <span className="card-en">{skill.english}</span>
-        <p className="card-desc">{skill.summaryZh || skill.styleSummaryZh || '按此 Skill 的原始视觉规则生成。'}</p>
-        <button className="card-cover-edit" type="button" onClick={() => onEditCover(skill)}>更换封面</button>
-        <button className="card-skill-remove" type="button" onClick={() => onRemoveSkill(skill)}>移出工作台</button>
+        <p className="card-desc">{t(skill.summaryZh || skill.styleSummaryZh || '按此 Skill 的原始视觉规则生成。')}</p>
+        <button className="card-cover-edit" type="button" onClick={() => onEditCover(skill)}>{t('更换封面')}</button>
+        <button className="card-skill-remove" type="button" onClick={() => onRemoveSkill(skill)}>{t('移出工作台')}</button>
       </div>
       <div className="card-foot">
-        <div className="skill-tag-row" aria-label="Skill 标签">
-          <span className="skill-tag">{skill.modeLabel}</span>
-          <span className="skill-tag">{skill.scenes[0]}</span>
+        <div className="skill-tag-row" aria-label={t('Skill 标签')}>
+          <span className="skill-tag">{t(skill.modeLabel)}</span>
+          <span className="skill-tag">{t(skill.scenes[0])}</span>
         </div>
         <SkillSource skill={skill} compact />
       </div>
@@ -954,25 +963,27 @@ function SkillCard({ skill, isDragging, isDragOver, onDragStart, onDragOver, onD
 }
 
 function PromptCard({ prompt, onOpen, onEdit, onRemove }) {
+  const { t } = useI18n()
   return (
     <article className="skill-card prompt-card">
       <button className="card-visual" onClick={() => onOpen(prompt)} aria-label={`打开 ${prompt.name} 的工作区`}>
         <CardVisual skill={prompt} />
-        <span className="open-hint">打开工作区 ↗</span>
+        <span className="open-hint">{t('打开工作区 ↗')}</span>
       </button>
       <div className="card-body">
         <div className="card-names"><h2 title={prompt.name}>{prompt.name}</h2><span className="prompt-mark">PROMPT</span></div>
-        <span className="card-en">{prompt.modeLabel}</span>
-        <p className="card-desc">{prompt.summary || '按这个 Prompt 的固定风格规则生成。'}</p>
-        <button className="card-cover-edit" type="button" onClick={() => onEdit(prompt)}>编辑 Prompt</button>
-        <button className="card-skill-remove" type="button" onClick={() => onRemove(prompt)}>删除 Prompt</button>
+        <span className="card-en">{t(prompt.modeLabel)}</span>
+        <p className="card-desc">{prompt.summary ? t(prompt.summary) : t('按这个 Prompt 的固定风格规则生成。')}</p>
+        <button className="card-cover-edit" type="button" onClick={() => onEdit(prompt)}>{t('编辑 Prompt')}</button>
+        <button className="card-skill-remove" type="button" onClick={() => onRemove(prompt)}>{t('删除 Prompt')}</button>
       </div>
-      <div className="card-foot"><div className="skill-tag-row"><span className="skill-tag">{prompt.modeLabel}</span><span className="skill-tag">{prompt.index}</span></div><span className="prompt-fixed-label">固定模板</span></div>
+      <div className="card-foot"><div className="skill-tag-row"><span className="skill-tag">{t(prompt.modeLabel)}</span><span className="skill-tag">{prompt.index}</span></div><span className="prompt-fixed-label">{t('固定模板')}</span></div>
     </article>
   )
 }
 
 function PromptEditor({ prompt, onClose, onSave }) {
+  const { t } = useI18n()
   const [values, setValues] = useState({ name: prompt.name || '', summary: prompt.summary || '', mode: prompt.mode || 'image', template: prompt.template || '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -987,14 +998,14 @@ function PromptEditor({ prompt, onClose, onSave }) {
   return (
     <div className="workshop-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <section className="workshop-panel prompt-editor" role="dialog" aria-modal="true" aria-labelledby="prompt-editor-title">
-        <div className="workshop-head"><div><p className="kicker">PROMPT TEMPLATE</p><h2 id="prompt-editor-title">{prompt.id ? '编辑 Prompt' : '添加 Prompt'}</h2><p>保存可用于多个主体的固定风格规则；单张图片专用描述不适合作为模板。</p></div><button className="workshop-close" type="button" onClick={onClose} aria-label="关闭">×</button></div>
+        <div className="workshop-head"><div><p className="kicker">PROMPT TEMPLATE</p><h2 id="prompt-editor-title">{prompt.id ? t('编辑 Prompt') : t('添加 Prompt')}</h2><p>{t('保存可用于多个主体的固定风格规则；单张图片专用描述不适合作为模板。')}</p></div><button className="workshop-close" type="button" onClick={onClose} aria-label="关闭">×</button></div>
         <form className="workshop-form" onSubmit={submit}>
-          <label className="field"><span>名称</span><input value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} required maxLength={200} /></label>
-          <label className="field"><span>说明（可选）</span><input value={values.summary} onChange={(event) => setValues((current) => ({ ...current, summary: event.target.value }))} maxLength={500} /></label>
-          <div className="field"><span>类型</span><div className="prompt-mode-options"><label><input type="radio" name="prompt-mode" value="image" checked={values.mode === 'image'} onChange={() => setValues((current) => ({ ...current, mode: 'image' }))} />图片转化型</label><label><input type="radio" name="prompt-mode" value="text" checked={values.mode === 'text'} onChange={() => setValues((current) => ({ ...current, mode: 'text' }))} />纯文本生成型</label></div></div>
-          <label className="field"><span>固定 Prompt 正文</span><textarea value={values.template} onChange={(event) => setValues((current) => ({ ...current, template: event.target.value }))} required maxLength={30000} rows={10} /></label>
+          <label className="field"><span>{t('名称')}</span><input value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} required maxLength={200} /></label>
+          <label className="field"><span>{t('说明（可选）')}</span><input value={values.summary} onChange={(event) => setValues((current) => ({ ...current, summary: event.target.value }))} maxLength={500} /></label>
+          <div className="field"><span>{t('类型')}</span><div className="prompt-mode-options"><label><input type="radio" name="prompt-mode" value="image" checked={values.mode === 'image'} onChange={() => setValues((current) => ({ ...current, mode: 'image' }))} />{t('图片转化型')}</label><label><input type="radio" name="prompt-mode" value="text" checked={values.mode === 'text'} onChange={() => setValues((current) => ({ ...current, mode: 'text' }))} />{t('纯文本生成型')}</label></div></div>
+          <label className="field"><span>{t('固定 Prompt 正文')}</span><textarea value={values.template} onChange={(event) => setValues((current) => ({ ...current, template: event.target.value }))} required maxLength={30000} rows={10} /></label>
           {error && <p className="workshop-error" role="alert">{error}</p>}
-          <button className="run workshop-save" type="submit" disabled={saving}>{saving ? '正在保存…' : '保存 Prompt'}</button>
+          <button className="run workshop-save" type="submit" disabled={saving}>{saving ? t('正在保存…') : t('保存 Prompt')}</button>
         </form>
       </section>
     </div>
@@ -1002,6 +1013,7 @@ function PromptEditor({ prompt, onClose, onSave }) {
 }
 
 function SkillCoverEditor({ skill, results, error, onClose, onSave }) {
+  const { t } = useI18n()
   const options = useMemo(() => {
     const outputResults = results
       .filter((result) => result.skillId === skill.id && result.image)
@@ -1051,8 +1063,8 @@ function SkillCoverEditor({ skill, results, error, onClose, onSave }) {
     <div className="cover-editor-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <section className="cover-editor" role="dialog" aria-modal="true" aria-labelledby="cover-editor-title">
         <div className="cover-editor-head">
-          <div><p className="kicker">SKILL COVER</p><h2 id="cover-editor-title">更换「{skill.name}」封面</h2><p>只能选择这个 Skill 的生成结果，封面框固定为 4:5。</p></div>
-          <button className="workshop-close" type="button" onClick={onClose} aria-label="关闭">×</button>
+          <div><p className="kicker">SKILL COVER</p><h2 id="cover-editor-title">{t('更换「')}{skill.name}{t('」封面')}</h2><p>{t('只能选择这个 Skill 的生成结果，封面框固定为 4:5。')}</p></div>
+          <button className="workshop-close" type="button" onClick={onClose} aria-label={t('关闭')}>×</button>
         </div>
         {options.length ? (
           <div className="cover-editor-grid">
@@ -1064,32 +1076,32 @@ function SkillCoverEditor({ skill, results, error, onClose, onSave }) {
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
                 role="application"
-                aria-label="拖动图片调整封面取景"
+                aria-label={t('拖动图片调整封面取景')}
               >
                 <img src={selected?.image} alt="封面预览" style={{ objectPosition: `${position.x}% ${position.y}%` }} />
-                <span>封面 · 4:5</span>
+                <span>{t('封面')} · 4:5</span>
               </div>
-              <small>拖动图片调整取景位置</small>
+              <small>{t('拖动图片调整取景位置')}</small>
             </div>
             <div className="cover-editor-options">
-              <strong>选择一张已生成作品</strong>
+              <strong>{t('选择一张已生成作品')}</strong>
               <div className="cover-source-grid">
                 {options.map((option) => (
                   <button type="button" key={option.id} className={selected?.id === option.id ? 'cover-source selected' : 'cover-source'} onClick={() => { setSelected(option); setPosition(option.coverPosition || { x: 50, y: 50 }) }}>
                     <img src={option.image} alt={option.title || skill.name} />
-                    <span>{option.coverLabel || '生成结果'}</span>
+                    <span>{option.coverLabel || t('生成结果')}</span>
                   </button>
                 ))}
               </div>
               {error && <p className="cover-editor-error" role="alert">{error}</p>}
               <div className="cover-editor-actions">
-                <button type="button" className="cover-editor-cancel" onClick={onClose}>取消</button>
-                <button type="button" className="cover-save" disabled={!selected} onClick={() => onSave(skill, selected.image, position)}>保存封面</button>
+                <button type="button" className="cover-editor-cancel" onClick={onClose}>{t('取消')}</button>
+                <button type="button" className="cover-save" disabled={!selected} onClick={() => onSave(skill, selected.image, position)}>{t('保存封面')}</button>
               </div>
             </div>
           </div>
         ) : (
-          <div className="cover-editor-empty"><strong>还没有可用的生成结果</strong><p>先运行这个 Skill 并保存一次结果，之后就可以在这里更换封面。</p><button type="button" className="cover-save" onClick={onClose}>返回风格仓库</button></div>
+          <div className="cover-editor-empty"><strong>{t('还没有可用的生成结果')}</strong><p>{t('先运行这个 Skill 并保存一次结果，之后就可以在这里更换封面。')}</p><button type="button" className="cover-save" onClick={onClose}>{t('返回风格仓库')}</button></div>
         )}
       </section>
     </div>
@@ -1099,6 +1111,7 @@ function SkillCoverEditor({ skill, results, error, onClose, onSave }) {
 /* ---------------- 创作工作区 ---------------- */
 
 function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHistory, selectedTaskId, selectedTaskState, selectedTaskMessage, onBack, onSubmit, onNewTask, onSaveResult, onSelectTaskResult, saveError }) {
+  const { t } = useI18n()
   const [values, setValues] = useState({})
   const [filesByField, setFilesByField] = useState({})
   const [answers, setAnswers] = useState({})
@@ -1177,23 +1190,23 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
             return { ...current, [field.id]: Array.from(e.target.files || []) }
           })} />
           <span className="drop-plus">+</span>
-          <strong>{names.length ? names.join('、') : `拖入${field.label}，或点击选择`}</strong>
-          <small>{field.hint}</small>
+          <strong>{names.length ? names.join('、') : `${t('拖入')}${t(field.label)}${t('，或点击选择')}`}</strong>
+          <small>{t(field.hint || '')}</small>
         </label>
       )
     }
     if (field.type === 'textarea') {
       return (
         <label className="field" key={field.id}>
-          <span>{field.label}</span>
-          <textarea value={fieldValue(field.id)} onChange={(e) => setValues((current) => ({ ...current, [field.id]: e.target.value }))} placeholder={field.placeholder || ''} />
+          <span>{t(field.label)}</span>
+          <textarea value={fieldValue(field.id)} onChange={(e) => setValues((current) => ({ ...current, [field.id]: e.target.value }))} placeholder={t(field.placeholder || '')} />
         </label>
       )
     }
     if (field.type === 'ratio') {
       return (
         <div className="field" key={field.id}>
-          <span>{field.label}</span>
+          <span>{t(field.label)}</span>
           <div className="ratio-row">
             {field.options.map((option) => <button type="button" key={option} className={fieldValue(field.id) === option ? 'ratio on' : 'ratio'} onClick={() => setValues((current) => ({ ...current, [field.id]: option }))}>{option}</button>)}
           </div>
@@ -1203,10 +1216,10 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
     if (field.type === 'select') {
       return (
         <label className="field" key={field.id}>
-          <span>{field.label}</span>
+          <span>{t(field.label)}</span>
           <select value={fieldValue(field.id)} onChange={(e) => setValues((current) => ({ ...current, [field.id]: e.target.value }))}>
-            <option value="">请选择</option>
-            {field.options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+            <option value="">{t('请选择')}</option>
+            {field.options.map((option) => <option value={option.value} key={option.value}>{t(option.label)}</option>)}
           </select>
         </label>
       )
@@ -1214,13 +1227,13 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
     if (field.type === 'questions') {
       return (
         <div className="question-list" key={field.id}>
-          <span className="field-label">{field.label}</span>
+          <span className="field-label">{t(field.label)}</span>
           {(field.questions || (skill.mode === 'guided' ? GUIDED_QUESTIONS : [])).map((q) => (
             <div key={q.id} className={answers[q.id] ? 'q-card answered' : 'q-card'}>
-              <p className="q-label">{q.label}</p>
-              <p className="q-text">{q.question}</p>
+              <p className="q-label">{t(q.label)}</p>
+              <p className="q-text">{t(q.question)}</p>
               <div className="q-options">
-                {q.options.map((opt) => <button type="button" key={opt} className={answers[q.id] === opt ? 'q-opt on' : 'q-opt'} onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}>{opt}</button>)}
+                {q.options.map((opt) => <button type="button" key={opt} className={answers[q.id] === opt ? 'q-opt on' : 'q-opt'} onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}>{t(opt)}</button>)}
               </div>
             </div>
           ))}
@@ -1241,7 +1254,7 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
   return (
     <section className="page page-enter studio">
       <div className="studio-topline">
-        <button className="back" onClick={onBack}>← 返回风格仓库</button>
+        <button className="back" onClick={onBack}>{t('← 返回风格仓库')}</button>
         <span className="crumb">CREATION STUDIO / {skill.english}</span>
       </div>
 
@@ -1252,36 +1265,36 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
           <StudioDescription skill={skill} />
           {skill.kind !== 'prompt' && <SkillSource skill={skill} />}
         </div>
-        <span className="studio-ver">{skill.kind === 'prompt' ? 'Prompt 模板' : `本地 Skill · ${formatSkillVersion(skill.version)}`}</span>
+        <span className="studio-ver">{skill.kind === 'prompt' ? t('Prompt 模板') : `${t('本地 Skill · ')}${formatSkillVersion(skill.version)}`}</span>
       </div>
 
       <div className="studio-cols">
         <form className="studio-form" onSubmit={submit}>
           <div className="form-head">
-            <strong>输入</strong>
-            <span>{skill.kind === 'prompt' ? '输入会和固定 Prompt 一起发送' : (skill.needsReview ? '输入能力尚未完全确认，图片和文字都可以尝试' : '输入会按这个 Skill 自己的方式处理')}</span>
+            <strong>{t('输入')}</strong>
+            <span>{skill.kind === 'prompt' ? t('输入会和固定 Prompt 一起发送') : (skill.needsReview ? t('输入能力尚未完全确认，图片和文字都可以尝试') : t('输入会按这个 Skill 自己的方式处理'))}</span>
           </div>
 
           {inputSchema.map(renderField)}
 
           {continuing && (
             <label className="field continuation-prompt">
-              <span>本轮修改提示</span>
-              <textarea value={continuationPrompt} onChange={(e) => setContinuationPrompt(e.target.value)} placeholder="告诉这个 Skill 你想基于当前成果修改什么，例如：保留主体，把色彩改成冷蓝，减少文字并扩大留白" />
-              <small>这段提示会和当前成果一起发送给同一个后台 Job，不会新建独立任务。</small>
+              <span>{t('本轮修改提示')}</span>
+              <textarea value={continuationPrompt} onChange={(e) => setContinuationPrompt(e.target.value)} placeholder={t('告诉这个 Skill 你想基于当前成果修改什么，例如：保留主体，把色彩改成冷蓝，减少文字并扩大留白')} />
+              <small>{t('这段提示会和当前成果一起发送给同一个后台 Job，不会新建独立任务。')}</small>
             </label>
           )}
 
           <button className="run" type="submit" disabled={!ready || continuationBusy}>
-            <span>{continuing ? '继续修改当前任务' : `运行这个${skill.kind === 'prompt' ? ' Prompt' : ' Skill'}`}</span><b>{continuationBusy ? (selectedTaskMessage || '后台处理中') : backgroundTaskCount ? `后台已有 ${backgroundTaskCount} 个` : '⌘ ↵'}</b>
+            <span>{continuing ? t('继续修改当前任务') : `${t('运行这个')}${skill.kind === 'prompt' ? ' Prompt' : ' Skill'}`}</span><b>{continuationBusy ? (selectedTaskMessage || t('后台处理中')) : backgroundTaskCount ? `${t('后台已有')} ${backgroundTaskCount}` : '⌘ ↵'}</b>
           </button>
-          {result && selectedTaskId && <button className="studio-new-task" type="button" onClick={onNewTask}>新建独立任务</button>}
-          <p className="phase-note">输入由当前{skill.kind === 'prompt' ? ' Prompt' : ' Skill'} 的配置决定</p>
+          {result && selectedTaskId && <button className="studio-new-task" type="button" onClick={onNewTask}>{t('新建独立任务')}</button>}
+          <p className="phase-note">{t('输入由当前')}{skill.kind === 'prompt' ? ' Prompt' : ' Skill'}{t('的配置决定')}</p>
         </form>
 
         <aside className="studio-side">
           <div className="side-block">
-            <div className="side-block-head"><span>{result?.image ? '当前修改成果' : '风格预览'}</span><span>{result?.image ? '本轮基于此图' : (skill.cover ? '真实示例' : '需先生成样例')}</span></div>
+            <div className="side-block-head"><span>{result?.image ? t('当前修改成果') : t('风格预览')}</span><span>{result?.image ? t('本轮基于此图') : (skill.cover ? t('真实示例') : t('需先生成样例'))}</span></div>
             {result?.image ? (
               <div className="studio-current-preview">
                 <img src={result.image} alt={`${result.title || skill.name} 当前修改成果`} />
@@ -1289,12 +1302,12 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
             ) : <CardVisual skill={skill} size="preview" />}
           </div>
           <div className="side-block">
-            <div className="side-block-head"><span>参数摘要</span></div>
+            <div className="side-block-head"><span>{t('参数摘要')}</span></div>
             <dl className="param-list">
-              <div><dt>输入方式</dt><dd>{skill.modeLabel}</dd></div>
-              <div><dt>执行引擎</dt><dd>本地执行器 · 按当前配置运行</dd></div>
-              <div><dt>{skill.kind === 'prompt' ? '模板类型' : 'Skill 版本'}</dt><dd>{skill.kind === 'prompt' ? skill.modeLabel : formatSkillVersion(skill.version)}</dd></div>
-              <div><dt>输出位置</dt><dd>jobs/&lt;job-id&gt;/output</dd></div>
+              <div><dt>{t('输入方式')}</dt><dd>{t(skill.modeLabel)}</dd></div>
+              <div><dt>{t('执行引擎')}</dt><dd>{t('本地执行器 · 按当前配置运行')}</dd></div>
+              <div><dt>{skill.kind === 'prompt' ? t('模板类型') : t('Skill 版本')}</dt><dd>{skill.kind === 'prompt' ? t(skill.modeLabel) : formatSkillVersion(skill.version)}</dd></div>
+              <div><dt>{t('输出位置')}</dt><dd>jobs/&lt;job-id&gt;/output</dd></div>
             </dl>
           </div>
         </aside>
@@ -1318,6 +1331,7 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
 }
 
 function TaskResultHistory({ tasks, styleName, sourceKind, selectedTaskId, onSelect }) {
+  const { t } = useI18n()
   const entries = tasks.flatMap((task) => {
     const grouped = new Map()
     const results = task.resultVersions?.length ? task.resultVersions : task.result ? [task.result] : []
@@ -1332,8 +1346,8 @@ function TaskResultHistory({ tasks, styleName, sourceKind, selectedTaskId, onSel
   return (
     <section className="task-result-history">
       <div className="task-result-history-head">
-        <div><p className="kicker">RUN HISTORY</p><h2>这个{sourceKind === 'prompt' ? ' Prompt' : ' Skill'} 的运行成果</h2></div>
-        <span>{entries.length} 个版本 · {tasks.length} 个任务</span>
+        <div><p className="kicker">RUN HISTORY</p><h2>{t('这个')}{sourceKind === 'prompt' ? ' Prompt' : ' Skill'}{t('的运行成果')}</h2></div>
+        <span>{entries.length}{t('个版本')} · {tasks.length}{t('个任务')}</span>
       </div>
       <div className="task-result-history-list">
         {entries.map(({ task, result, version, count }) => (
@@ -1348,6 +1362,7 @@ function TaskResultHistory({ tasks, styleName, sourceKind, selectedTaskId, onSel
 }
 
 function GeneratedResultPanel({ result, ratio, position, onRatioChange, onPositionChange, onSave, saveError, needsCover, sourceKind = 'skill' }) {
+  const { t } = useI18n()
   const dragging = useRef(false)
 
   function updatePosition(clientX, clientY, element) {
@@ -1377,10 +1392,10 @@ function GeneratedResultPanel({ result, ratio, position, onRatioChange, onPositi
       <div className="generated-result-head">
         <div>
           <p className="kicker">RESULT READY</p>
-          <h2>生成完成，保存这张作品</h2>
-          <p>{needsCover ? `这是该${sourceKind === 'prompt' ? ' Prompt' : ' Skill'} 的首次产出，保存后会同时作为风格卡片封面。` : '先选择图库的封面比例，再保存。原图尺寸不会被裁切。'}</p>
+          <h2>{t('生成完成，保存这张作品')}</h2>
+          <p>{needsCover ? `${t('这是该')}${sourceKind === 'prompt' ? ' Prompt' : ' Skill'}${t('的首次产出，保存后会同时作为风格卡片封面。')}` : t('先选择图库的封面比例，再保存。原图尺寸不会被裁切。')}</p>
         </div>
-        <span className="generated-status">待保存</span>
+        <span className="generated-status">{t('待保存')}</span>
       </div>
       <div className="generated-result-body">
         <div
@@ -1398,22 +1413,22 @@ function GeneratedResultPanel({ result, ratio, position, onRatioChange, onPositi
               <strong>{result.styleName}</strong>
             </div>
           )}
-          <span className="crop-safe-area">图库封面 · {ratio}</span>
-          <span className="crop-drag-hint">拖动调整取景</span>
+          <span className="crop-safe-area">{t('图库封面')} · {ratio}</span>
+          <span className="crop-drag-hint">{t('拖动调整取景')}</span>
         </div>
         <div className="generated-result-controls">
           <div className="generated-copy">
             <strong>{result.title}</strong>
             <span>{result.styleName} · 原图 {result.originalRatio}</span>
           </div>
-          <div className="cover-ratio-options" aria-label="选择封面比例">
+          <div className="cover-ratio-options" aria-label={t('选择封面比例')}>
             {['4:3', '3:4'].map((option) => (
               <button type="button" key={option} className={ratio === option ? 'cover-ratio on' : 'cover-ratio'} onClick={() => onRatioChange(option)}>{option}</button>
             ))}
           </div>
           <p className="crop-position">取景位置 {Math.round(position.x)}% / {Math.round(position.y)}%</p>
           {saveError && <p className="generated-save-error" role="alert">{saveError}</p>}
-          <button className="cover-save generated-save" type="button" onClick={onSave}>{needsCover ? '保存结果并生成风格封面' : '保存到图库'}</button>
+          <button className="cover-save generated-save" type="button" onClick={onSave}>{needsCover ? t('保存结果并生成风格封面') : t('保存到图库')}</button>
         </div>
       </div>
     </section>
@@ -1421,6 +1436,7 @@ function GeneratedResultPanel({ result, ratio, position, onRatioChange, onPositi
 }
 
 function ConfirmDialog({ title, message, confirmLabel = '确认', onConfirm, onCancel }) {
+  const { t } = useI18n()
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === 'Escape') onCancel()
@@ -1433,13 +1449,13 @@ function ConfirmDialog({ title, message, confirmLabel = '确认', onConfirm, onC
     <div className="confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel() }}>
       <section className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
         <div>
-          <p className="kicker">请确认操作</p>
+          <p className="kicker">{t('请确认操作')}</p>
           <h2 id="confirm-title">{title}</h2>
           <p id="confirm-message">{message}</p>
         </div>
         <div className="confirm-actions">
-          <button type="button" className="confirm-cancel" onClick={onCancel}>取消</button>
-          <button type="button" className="confirm-submit" autoFocus onClick={onConfirm}>{confirmLabel}</button>
+          <button type="button" className="confirm-cancel" onClick={onCancel}>{t('取消')}</button>
+          <button type="button" className="confirm-submit" autoFocus onClick={onConfirm}>{t(confirmLabel)}</button>
         </div>
       </section>
     </div>
@@ -1447,6 +1463,7 @@ function ConfirmDialog({ title, message, confirmLabel = '确认', onConfirm, onC
 }
 
 function ResultViewer({ result, onClose }) {
+  const { t } = useI18n()
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === 'Escape') onClose()
@@ -1457,8 +1474,8 @@ function ResultViewer({ result, onClose }) {
 
   return (
     <div className="result-viewer-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <section className="result-viewer" role="dialog" aria-modal="true" aria-label="原图查看">
-        <button className="result-viewer-close" type="button" onClick={onClose} aria-label="关闭原图查看">×</button>
+      <section className="result-viewer" role="dialog" aria-modal="true" aria-label={t('原图查看')}>
+        <button className="result-viewer-close" type="button" onClick={onClose} aria-label={t('关闭原图查看')}>×</button>
         <div className="result-viewer-image-wrap">
           <img className="result-viewer-image" src={result.image} alt={`${result.title || '生成结果'} 原图`} />
         </div>
@@ -1470,6 +1487,7 @@ function ResultViewer({ result, onClose }) {
 /* ---------------- 图库 ---------------- */
 
 function ResultsView({ results, skills, prompts, onView, onAgain, onDownload, onDelete }) {
+  const { t } = useI18n()
   const [columnCount, setColumnCount] = useState(4)
   const [filterSkillId, setFilterSkillId] = useState('all')
 
@@ -1521,22 +1539,22 @@ function ResultsView({ results, skills, prompts, onView, onAgain, onDownload, on
       <div className="page-head">
         <div>
           <p className="kicker">GALLERY</p>
-          <h1>图库</h1>
-          <p className="page-sub">原图保持原尺寸，图库只展示你裁切保存的 4:3 / 3:4 封面。</p>
+          <h1>{t('图库')}</h1>
+          <p className="page-sub">{t('原图保持原尺寸，图库只展示你裁切保存的 4:3 / 3:4 封面。')}</p>
         </div>
         <div className="page-stat">
           {filterSkillId === 'all' ? (
-            <><strong>{results.length}</strong><span>个本地结果</span></>
+            <><strong>{results.length}</strong><span>{t('个本地结果')}</span></>
           ) : (
-            <><strong>{filteredResults.length}</strong><span>张 / 共 {results.length} 张</span></>
+            <><strong>{filteredResults.length}</strong><span>{t('张 / 共')} {results.length} {t('张')}</span></>
           )}
         </div>
       </div>
       <div className="result-toolbar">
-        <label className="result-filter"><span>分类筛选</span><select value={filterSkillId} onChange={(event) => setFilterSkillId(event.target.value)}><option value="all">全部风格</option>{filterOptions.map(([id, label]) => <option value={id} key={id}>{label}</option>)}</select></label>
-        <span className="result-sort-note">按生成时间倒序</span>
+        <label className="result-filter"><span>{t('分类筛选')}</span><select value={filterSkillId} onChange={(event) => setFilterSkillId(event.target.value)}><option value="all">{t('全部风格')}</option>{filterOptions.map(([id, label]) => <option value={id} key={id}>{label}</option>)}</select></label>
+        <span className="result-sort-note">{t('按生成时间倒序')}</span>
       </div>
-      {!filteredResults.length && <div className="empty-hint">还没有符合条件的结果。</div>}
+      {!filteredResults.length && <div className="empty-hint">{t('还没有符合条件的结果。')}</div>}
       <div className="result-grid">
         {columns.map((column, index) => (
           <div className="result-column" key={`result-column-${index}`}>
@@ -1558,19 +1576,20 @@ function ResultsView({ results, skills, prompts, onView, onAgain, onDownload, on
 }
 
 function ResultCard({ result: r, onView, onAgain, onDownload, onDelete }) {
+  const { t } = useI18n()
   return (
     <article className="result-card">
       <div className={`result-thumb result-thumb-${r.coverRatio === '3:4' ? 'portrait' : 'landscape'}`}>
         {r.image ? <img src={r.image} alt={r.title} style={{ objectPosition: `${r.coverPosition?.x ?? 50}% ${r.coverPosition?.y ?? 50}%` }} /> : (
-          <div className="result-art"><span>占位结果</span><strong>{r.styleName}</strong></div>
+          <div className="result-art"><span>{t('占位结果')}</span><strong>{r.styleName}</strong></div>
         )}
-        <span className="result-ratio">封面 {r.coverRatio || '待设置'}</span>
+        <span className="result-ratio">{t('封面')} {r.coverRatio || t('待设置')}</span>
       </div>
       <div className="result-actions">
-        <button onClick={() => onView(r)}>查看</button>
-        <button onClick={() => onAgain(r)}>再次生成</button>
-        <button onClick={() => onDownload(r)}>下载</button>
-        <button className="result-delete" onClick={() => onDelete(r)}>删除</button>
+        <button onClick={() => onView(r)}>{t('查看')}</button>
+        <button onClick={() => onAgain(r)}>{t('再次生成')}</button>
+        <button onClick={() => onDownload(r)}>{t('下载')}</button>
+        <button className="result-delete" onClick={() => onDelete(r)}>{t('删除')}</button>
       </div>
     </article>
   )
@@ -1598,6 +1617,7 @@ function formatBytes(value) {
 }
 
 function SettingsPanel({ onClose }) {
+  const { t } = useI18n()
   const [health, setHealth] = useState(null)
   const [storage, setStorage] = useState(null)
   const [error, setError] = useState('')
@@ -1626,29 +1646,30 @@ function SettingsPanel({ onClose }) {
     <div className="settings-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <section className="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
         <div className="settings-head">
-          <div><p className="kicker">LOCAL DIAGNOSTICS</p><h2 id="settings-title">本地诊断</h2><p>这里显示工作台与本地服务的连接状态，不保存模型密钥。</p></div>
-          <button className="workshop-close" onClick={onClose} aria-label="关闭">×</button>
+          <div><p className="kicker">LOCAL DIAGNOSTICS</p><h2 id="settings-title">{t('本地诊断')}</h2><p>{t('这里显示工作台与本地服务的连接状态，不保存模型密钥。')}</p></div>
+          <button className="workshop-close" onClick={onClose} aria-label={t('关闭')}>×</button>
         </div>
         <div className="settings-grid">
-          <div className="settings-row"><span>本地 API</span><strong className={health ? 'settings-ok' : error ? 'settings-fail' : ''}>{health ? '已连接' : error ? '未连接' : '检查中…'}</strong></div>
-          <div className="settings-row"><span>数据目录</span><code>{health?.dataDir || '启动本地服务后显示'}</code></div>
-          <div className="settings-row"><span>图片库目录</span><div className="settings-path-line"><code>{storage?.libraryDir || '启动本地服务后显示'}</code>{desktop && <button className="settings-open-button" onClick={() => desktop.openLibrary()}>打开</button>}</div></div>
-          <div className="settings-row"><span>上传图片</span><div className="settings-path-line"><code>{storage ? `${storage.uploads.files} 个 · ${formatBytes(storage.uploads.bytes)} · ${storage.uploads.path}` : '检查中…'}</code>{desktop && <button className="settings-open-button" onClick={() => desktop.openUploads()}>打开</button>}</div></div>
-          <div className="settings-row"><span>生成图片</span><div className="settings-path-line"><code>{storage ? `${storage.generated.files} 个 · ${formatBytes(storage.generated.bytes)} · ${storage.generated.path}` : '检查中…'}</code>{desktop && <button className="settings-open-button" onClick={() => desktop.openGenerated()}>打开</button>}</div></div>
-          <div className="settings-row settings-executor-row"><span>执行器配置</span><div className="executor-choice"><div className="executor-choice-buttons" role="group" aria-label="选择执行器">
+          <div className="settings-row"><span>{t('本地 API')}</span><strong className={health ? 'settings-ok' : error ? 'settings-fail' : ''}>{health ? t('已连接') : error ? t('未连接') : t('检查中…')}</strong></div>
+          <div className="settings-row"><span>{t('数据目录')}</span><code>{health?.dataDir || t('启动本地服务后显示')}</code></div>
+          <div className="settings-row"><span>{t('图片库目录')}</span><div className="settings-path-line"><code>{storage?.libraryDir || t('启动本地服务后显示')}</code>{desktop && <button className="settings-open-button" onClick={() => desktop.openLibrary()}>{t('打开')}</button>}</div></div>
+          <div className="settings-row"><span>{t('上传图片')}</span><div className="settings-path-line"><code>{storage ? `${storage.uploads.files} ${t('个')} · ${formatBytes(storage.uploads.bytes)} · ${storage.uploads.path}` : t('检查中…')}</code>{desktop && <button className="settings-open-button" onClick={() => desktop.openUploads()}>{t('打开')}</button>}</div></div>
+          <div className="settings-row"><span>{t('生成图片')}</span><div className="settings-path-line"><code>{storage ? `${storage.generated.files} ${t('个')} · ${formatBytes(storage.generated.bytes)} · ${storage.generated.path}` : t('检查中…')}</code>{desktop && <button className="settings-open-button" onClick={() => desktop.openGenerated()}>{t('打开')}</button>}</div></div>
+          <div className="settings-row settings-executor-row"><span>{t('执行器配置')}</span><div className="executor-choice"><div className="executor-choice-buttons" role="group" aria-label={t('选择执行器')}>
             {['codex', 'workbuddy'].map((id) => <button key={id} type="button" className={health?.executor?.id === id || (id === 'codex' && health?.executor?.id === 'codex-runner') ? 'executor-choice-button active' : 'executor-choice-button'} disabled={savingExecutor} onClick={() => selectExecutor(id)}>{id === 'codex' ? 'Codex' : 'WorkBuddy'}</button>)}
-          </div><small>{health?.executor ? `${health.executor.label} · ${health.executor.state === 'missing_token' ? '未配置连接凭据' : '已配置'}` : '检查中…'}</small></div></div>
-          <div className="settings-row"><span>生图接口</span><strong className={health?.executor?.imageProvider?.state === 'external_config_required' ? 'settings-pending' : 'settings-ok'}>{health?.executor?.imageProvider?.label || '由 Codex 提供'}</strong></div>
-          <div className="settings-row"><span>端口覆盖</span><code>STYLE_SHELF_PORT / STYLE_SHELF_FRONTEND_PORT</code></div>
+          </div><small>{health?.executor ? `${health.executor.label} · ${health.executor.state === 'missing_token' ? t('未配置连接凭据') : t('已配置')}` : t('检查中…')}</small></div></div>
+          <div className="settings-row"><span>{t('生图接口')}</span><strong className={health?.executor?.imageProvider?.state === 'external_config_required' ? 'settings-pending' : 'settings-ok'}>{health?.executor?.imageProvider?.label || t('由 Codex 提供')}</strong></div>
+          <div className="settings-row"><span>{t('端口覆盖')}</span><code>STYLE_SHELF_PORT / STYLE_SHELF_FRONTEND_PORT</code></div>
         </div>
         {error && <p className="settings-error" role="alert">{error}。请先在仓库目录运行 `npm run start`。</p>}
-        <div className="settings-note"><strong>凭据边界</strong><p>模型登录、API 密钥和本机 Skill 文件都留在你的环境中；工作台只保存目录索引、Job 状态和结果文件引用。</p></div>
+        <div className="settings-note"><strong>{t('凭据边界')}</strong><p>{t('模型登录、API 密钥和本机 Skill 文件都留在你的环境中；工作台只保存目录索引、Job 状态和结果文件引用。')}</p></div>
       </section>
     </div>
   )
 }
 
 function SkillWorkshop({ skills, onClose, onRefresh }) {
+  const { t } = useI18n()
   const [source, setSource] = useState('')
   const [installing, setInstalling] = useState(false)
   const [localQuery, setLocalQuery] = useState('')
@@ -1738,40 +1759,40 @@ function SkillWorkshop({ skills, onClose, onRefresh }) {
       <div className="workshop-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
         <section className="workshop-panel" role="dialog" aria-modal="true" aria-labelledby="workshop-title">
         <div className="workshop-head">
-          <div><p className="kicker">SKILL WORKSHOP</p><h2 id="workshop-title">管理风格目录</h2><p>这里只管理工作台的调用清单；移出不会删除本机 Codex Skill，历史 Job 和结果也不会被删除。</p></div>
-          <button className="workshop-close" onClick={onClose} aria-label="关闭">×</button>
+          <div><p className="kicker">SKILL WORKSHOP</p><h2 id="workshop-title">{t('管理风格目录')}</h2><p>{t('这里只管理工作台的调用清单；移出不会删除本机 Codex Skill，历史 Job 和结果也不会被删除。')}</p></div>
+          <button className="workshop-close" onClick={onClose} aria-label={t('关闭')}>×</button>
         </div>
         <div className="workshop-grid">
           <div className="workshop-list">
             {skills.map((skill) => (
               <div className="workshop-item" key={skill.id}>
                 <div><strong>{skill.name}</strong><small>{skill.id} · {formatSkillVersion(skill.version)}</small></div>
-                <div className="workshop-item-actions"><button onClick={() => setSource(skill.id)}>重装</button><button onClick={() => remove(skill)}>移出工作台</button></div>
+                <div className="workshop-item-actions"><button onClick={() => setSource(skill.id)}>{t('重装')}</button><button onClick={() => remove(skill)}>{t('移出工作台')}</button></div>
               </div>
             ))}
-            {deletedSkills.length > 0 && <div className="workshop-trash"><p>最近移出工作台</p>{deletedSkills.map((skill) => <div className="workshop-item" key={skill.id}><div><strong>{skill.name}</strong><small>{skill.id}</small></div><button onClick={() => restore(skill)}>恢复调用</button></div>)}</div>}
+            {deletedSkills.length > 0 && <div className="workshop-trash"><p>{t('最近移出工作台')}</p>{deletedSkills.map((skill) => <div className="workshop-item" key={skill.id}><div><strong>{skill.name}</strong><small>{skill.id}</small></div><button onClick={() => restore(skill)}>{t('恢复调用')}</button></div>)}</div>}
           </div>
           <form className="workshop-form" onSubmit={submit}>
-            <div className="workshop-form-head"><strong>从本机导入 Skill</strong><span className="install-badge">LOCAL CODEX</span></div>
-            <p className="workshop-install-copy">检索你本机 Codex 已安装的 Skill，勾选后加入风格仓库。如果这里没有你想要的 Skill，可以先让 Codex 完成安装，再回到这里检索添加。工作台不会移动或复制原始 Skill 文件，只会读取它的 `SKILL.md` 生成风格卡片。</p>
-            <label className="field"><span>检索本地 Skill</span><input value={localQuery} onChange={(event) => setLocalQuery(event.target.value)} placeholder="输入名称或关键词" /></label>
+            <div className="workshop-form-head"><strong>{t('从本机导入 Skill')}</strong><span className="install-badge">LOCAL CODEX</span></div>
+            <p className="workshop-install-copy">{t('检索你本机 Codex 已安装的 Skill，勾选后加入风格仓库。如果这里没有你想要的 Skill，可以先让 Codex 完成安装，再回到这里检索添加。工作台不会移动或复制原始 Skill 文件，只会读取它的 `SKILL.md` 生成风格卡片。')}</p>
+            <label className="field"><span>{t('检索本地 Skill')}</span><input value={localQuery} onChange={(event) => setLocalQuery(event.target.value)} placeholder={t('输入名称或关键词')} /></label>
             <div className="local-skill-list" aria-live="polite">
               {localSkills.length ? localSkills.map((skill) => (
                 <button type="button" className={`local-skill-row ${selectedLocalIds.includes(skill.id) ? 'is-selected' : ''} ${skill.inCatalog ? 'is-imported' : ''}`} key={skill.id} onClick={() => toggleLocalSkill(skill)} disabled={skill.inCatalog}>
                   <span className="local-skill-check" aria-hidden="true">{skill.inCatalog ? '✓' : selectedLocalIds.includes(skill.id) ? '✓' : ''}</span>
                   <span className="local-skill-copy"><strong>{skill.name}</strong><small>{skill.id}</small></span>
-                  <span className="skill-tag local-skill-state">{skill.inCatalog ? '已加入' : skill.modeLabel}</span>
+                  <span className="skill-tag local-skill-state">{skill.inCatalog ? t('已加入') : skill.modeLabel}</span>
                 </button>
-              )) : <p className="local-skill-empty">没有找到可导入的本地 Skill</p>}
+              )) : <p className="local-skill-empty">{t('没有找到可导入的本地 Skill')}</p>}
             </div>
-            <button className="run workshop-save" type="button" onClick={importLocalSkills} disabled={importingLocal || selectedLocalIds.length === 0}>{importingLocal ? '正在导入并读取 SKILL.md…' : `导入已选 Skill${selectedLocalIds.length ? `（${selectedLocalIds.length}）` : ''}`}</button>
-            <div className="workshop-divider"><span>或从仓库安装</span></div>
-            <div className="workshop-form-head"><strong>安装远程 Skill</strong><span className="install-badge">CODEX INSTALLER</span></div>
-            <p className="workshop-install-copy">输入 GitHub 仓库地址、Skill 文件夹地址，或已经存在的 Skill 名称。安装器会复制到本机 Codex Skills 目录，并读取 `SKILL.md` 自动生成风格卡片。</p>
-            <label className="field"><span>仓库地址 / Skill 名称</span><input value={source} onChange={(event) => setSource(event.target.value)} placeholder="https://github.com/owner/repo/tree/main/path 或 skill-name" required /></label>
-            <div className="workshop-source-hints"><span>支持 GitHub URL</span><span>支持已安装 / curated Skill 名称</span></div>
+            <button className="run workshop-save" type="button" onClick={importLocalSkills} disabled={importingLocal || selectedLocalIds.length === 0}>{importingLocal ? t('正在导入并读取 SKILL.md…') : `${t('导入已选 Skill')}${selectedLocalIds.length ? `（${selectedLocalIds.length}）` : ''}`}</button>
+            <div className="workshop-divider"><span>{t('或从仓库安装')}</span></div>
+            <div className="workshop-form-head"><strong>{t('安装远程 Skill')}</strong><span className="install-badge">CODEX INSTALLER</span></div>
+            <p className="workshop-install-copy">{t('输入 GitHub 仓库地址、Skill 文件夹地址，或已经存在的 Skill 名称。安装器会复制到本机 Codex Skills 目录，并读取 `SKILL.md` 自动生成风格卡片。')}</p>
+            <label className="field"><span>{t('仓库地址 / Skill 名称')}</span><input value={source} onChange={(event) => setSource(event.target.value)} placeholder="https://github.com/owner/repo/tree/main/path or skill-name" required /></label>
+            <div className="workshop-source-hints"><span>{t('支持 GitHub URL')}</span><span>{t('支持已安装 / curated Skill 名称')}</span></div>
             {error && <p className="workshop-error" role="alert">{error}</p>}
-            <button className="run workshop-save" type="submit" disabled={installing}>{installing ? '正在安装并读取 SKILL.md…' : '安装并加入风格仓库'}</button>
+            <button className="run workshop-save" type="submit" disabled={installing}>{installing ? t('正在安装并读取 SKILL.md…') : t('安装并加入风格仓库')}</button>
           </form>
         </div>
         </section>
@@ -1784,6 +1805,7 @@ function SkillWorkshop({ skills, onClose, onRefresh }) {
 /* ---------------- 右侧上下文栏 ---------------- */
 
 function ContextRail({ skills, tasks, results, draftTaskId, onAnswer, onCancel, onRetry, onOpenTaskResult, onViewResults, onOpenWorkshop }) {
+  const { t } = useI18n()
   const [showAllTasks, setShowAllTasks] = useState(false)
   const visibleTasks = showAllTasks ? tasks : tasks.slice(0, 3)
 
@@ -1791,31 +1813,31 @@ function ContextRail({ skills, tasks, results, draftTaskId, onAnswer, onCancel, 
     <aside className="rail">
       <section className="rail-block" id="task-progress">
         <div className="rail-head">
-          <h2>任务进度</h2>
-          <span>{tasks.length ? `${tasks.length} 个任务` : '空闲'}</span>
+          <h2>{t('任务进度')}</h2>
+          <span>{tasks.length ? `${tasks.length}${t('个任务')}` : t('空闲')}</span>
         </div>
         {tasks.length === 0 ? (
           <div className="rail-empty">
-            <strong>还没有后台任务</strong>
-            <p>从风格卡片提交一次生成，进度会一直显示在这里，离开工作区也不中断。</p>
+            <strong>{t('还没有后台任务')}</strong>
+            <p>{t('从风格卡片提交一次生成，进度会一直显示在这里，离开工作区也不中断。')}</p>
           </div>
         ) : (
           <>
             <div className={`task-list ${showAllTasks ? 'is-expanded' : ''}`}>
-              {visibleTasks.map((t) => (
-                <div key={t.id} data-task-id={t.id} className={`task state-${t.state}`}>
+              {visibleTasks.map((task) => (
+                <div key={task.id} data-task-id={task.id} className={`task state-${task.state}`}>
                   <div className="task-title">
-                    <strong>{t.name}</strong>
-                    <span className="task-state">{TASK_STATE_LABEL[t.state]}{t.state === 'running' ? ` ${t.progress}%` : ''}</span>
+                    <strong>{task.name}</strong>
+                    <span className="task-state">{t(TASK_STATE_LABEL[task.state])}{task.state === 'running' ? ` ${task.progress}%` : ''}</span>
                   </div>
-                  <div className="task-bar"><span style={{ width: `${t.progress}%` }} /></div>
-                  <p>{t.message}</p>
-                  {t.state === 'waiting_input' && <button className="task-action" onClick={() => onAnswer(t.id)}>回答问题 ↗</button>}
-                  {['queued', 'running', 'waiting_input'].includes(t.state) && <button className="task-action task-action-muted" onClick={() => onCancel(t.id)}>取消任务</button>}
-                  {t.state === 'failed' && <button className="task-action" onClick={() => onRetry(t.id)}>重试 ↻</button>}
-                  {t.state === 'completed' && (t.result
-                    ? <button className="task-action" onClick={() => onOpenTaskResult(t)}>{t.id === draftTaskId ? '继续处理这次成果 ↗' : '查看这次成果 ↗'}</button>
-                    : <button className="task-action" onClick={onViewResults}>打开图库 ↗</button>)}
+                  <div className="task-bar"><span style={{ width: `${task.progress}%` }} /></div>
+                  <p>{task.message}</p>
+                  {task.state === 'waiting_input' && <button className="task-action" onClick={() => onAnswer(task.id)}>{t('回答问题 ↗')}</button>}
+                  {['queued', 'running', 'waiting_input'].includes(task.state) && <button className="task-action task-action-muted" onClick={() => onCancel(task.id)}>{t('取消任务')}</button>}
+                  {task.state === 'failed' && <button className="task-action" onClick={() => onRetry(task.id)}>{t('重试 ↻')}</button>}
+                  {task.state === 'completed' && (task.result
+                    ? <button className="task-action" onClick={() => onOpenTaskResult(task)}>{task.id === draftTaskId ? t('继续处理这次成果 ↗') : t('查看这次成果 ↗')}</button>
+                    : <button className="task-action" onClick={onViewResults}>{t('打开图库 ↗')}</button>)}
                 </div>
               ))}
             </div>
@@ -1826,7 +1848,7 @@ function ContextRail({ skills, tasks, results, draftTaskId, onAnswer, onCancel, 
                 aria-expanded={showAllTasks}
                 onClick={() => setShowAllTasks((current) => !current)}
               >
-                <span>{showAllTasks ? '收起任务' : `查看全部任务（还有 ${tasks.length - 3} 个）`}</span>
+                <span>{showAllTasks ? t('收起任务') : `${t('查看全部任务（还有')} ${tasks.length - 3} ${t('个）')}`}</span>
                 <span aria-hidden="true">⌄</span>
               </button>
             )}
@@ -1836,8 +1858,8 @@ function ContextRail({ skills, tasks, results, draftTaskId, onAnswer, onCancel, 
 
       <section className="rail-block">
         <div className="rail-head">
-          <h2>最近结果</h2>
-          <button onClick={onViewResults}>查看全部</button>
+          <h2>{t('最近结果')}</h2>
+          <button onClick={onViewResults}>{t('查看全部')}</button>
         </div>
         <div className="mini-results">
           {results.slice(0, 2).map((r) => (
@@ -1850,19 +1872,19 @@ function ContextRail({ skills, tasks, results, draftTaskId, onAnswer, onCancel, 
       </section>
 
       <section className="rail-block">
-        <div className="rail-head"><h2>Skill 管理</h2></div>
+        <div className="rail-head"><h2>{t('Skill 管理')}</h2></div>
         <div className="skill-status-list">
           {skills.map((s) => (
             <div key={s.id} className="skill-status">
               <span className="skill-status-name">{s.name}</span>
-              <span className="skill-tag skill-status-tag">{s.installed === false ? '需先安装' : s.ready ? '已接入' : '待补素材'}</span>
+              <span className="skill-tag skill-status-tag">{s.installed === false ? t('需先安装') : s.ready ? t('已接入') : t('待补素材')}</span>
             </div>
           ))}
         </div>
-        <button className="workshop-btn" onClick={onOpenWorkshop}>打开 Skill Workshop <span>↗</span></button>
+        <button className="workshop-btn" onClick={onOpenWorkshop}>{t('打开 Skill Workshop')} <span>↗</span></button>
       </section>
     </aside>
   )
 }
 
-createRoot(document.getElementById('root')).render(<App />)
+createRoot(document.getElementById('root')).render(<LocaleProvider><App /></LocaleProvider>)

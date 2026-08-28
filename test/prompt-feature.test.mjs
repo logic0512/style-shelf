@@ -13,6 +13,16 @@ test('prompt store and job source contract', async (t) => {
   const prompts = await import(`../server/prompts.mjs?test=${Date.now()}`)
   const jobs = await import(`../server/jobs.mjs?test=${Date.now()}`)
 
+  const bundledPrompts = await prompts.listPrompts()
+  assert.deepEqual(bundledPrompts.map((prompt) => prompt.id), [
+    'editorial-paper-cut-poster',
+    'handdrawn-paper-cover',
+    'impasto-mini-landscape',
+    'storybook-woodcut-poster',
+    'minimal-magazine-collage',
+  ])
+  assert.ok(bundledPrompts.every((prompt) => prompt.mode === 'image'))
+
   const imagePrompt = await prompts.createPrompt({ name: '三色印章', summary: '把照片转成三色印章。', template: '保留主体轮廓，使用三色印章和大量留白。', mode: 'image' })
   assert.equal(imagePrompt.inputSchema[0].type, 'image')
   assert.equal(imagePrompt.inputSchema[0].required, true)
@@ -27,7 +37,7 @@ test('prompt store and job source contract', async (t) => {
 
   await assert.rejects(jobs.createJob({ id: 'double-source', skillId: 'skill-a', promptId: imagePrompt.id, payload: {} }), /invalid_job_source/)
   await prompts.deletePrompt(textPrompt.id)
-  assert.equal((await prompts.listPrompts()).length, 3)
+  assert.equal((await prompts.listPrompts()).length, 6)
 
   const promptsFile = join(root, 'data', 'prompts.json')
   await writeFile(promptsFile, '[{"id":"broken"}]\n', 'utf8')

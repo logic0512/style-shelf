@@ -676,6 +676,17 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   font-size: 12px;
 }
 .btn-outline:hover { background: #173eae; }
+.locale-toggle {
+  min-width: 34px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink-2);
+  font: 11px var(--mono);
+  cursor: pointer;
+}
+.locale-toggle:hover { border-color: var(--accent); color: var(--accent); }
 .settings-button {
   padding: 2px;
   border: 0;
