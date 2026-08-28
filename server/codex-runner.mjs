@@ -5,6 +5,8 @@ import { dirname, join } from 'node:path'
 import { spawn } from 'node:child_process'
 import { createInterface } from 'node:readline'
 import { readJob, saveJobArtifact, updateJob } from './jobs.mjs'
+import { getPrompt } from './prompts.mjs'
+import { buildPromptExecution } from './prompt-execution.mjs'
 
 const RUNTIME_CANDIDATES = [
   process.env.CODEX_BIN,
@@ -133,7 +135,10 @@ export async function runCodexJob(job, onProgress = () => {}, control = {}) {
   if (control.cancelled) throw new Error('job_cancelled')
   const runtime = await findRuntime()
   if (control.cancelled) throw new Error('job_cancelled')
-  const skillPath = await findSkill(job.skillId)
+  const prompt = job.promptId ? await getPrompt(job.promptId) : null
+  if (job.promptId && !prompt) throw new Error('prompt_not_found')
+  const skillPath = job.skillId ? await findSkill(job.skillId) : null
+  const executionText = prompt ? buildPromptExecution(job, prompt) : buildPrompt(job, skillPath)
   if (control.cancelled) throw new Error('job_cancelled')
   const child = spawn(runtime, ['app-server', '--listen', 'stdio://'], {
     cwd: dirname(job.outputDir),
@@ -190,7 +195,7 @@ export async function runCodexJob(job, onProgress = () => {}, control = {}) {
       })
     const turn = await client.request('turn/start', {
       threadId: thread.thread.id,
-      input: [{ type: 'text', text: buildPrompt(job, skillPath) }],
+      input: [{ type: 'text', text: executionText }],
       summary: 'concise',
     })
     turnStarted = true
@@ -198,7 +203,7 @@ export async function runCodexJob(job, onProgress = () => {}, control = {}) {
     const result = await turnDone
     if (!completed) throw new Error('codex_turn_incomplete')
     if (result.turn?.status && result.turn.status !== 'completed') throw new Error(`codex_turn_${result.turn.status}`)
-    return { runtime, skillPath, threadId: thread.thread.id, turnId: turn.turn.id, resumed: Boolean(existingThreadId), savedPaths: result.savedPaths }
+    return { runtime, skillPath, promptId: job.promptId || null, threadId: thread.thread.id, turnId: turn.turn.id, resumed: Boolean(existingThreadId), savedPaths: result.savedPaths }
   } catch (error) {
     if (control.cancelled) throw new Error('job_cancelled')
     throw error
@@ -279,7 +284,7 @@ export async function startJobRun(jobId) {
             turns,
             activeTurnId: null,
             lastTurnId: activeTurnId || null,
-            runner: { executor: 'codex', runtime: result.runtime, skillPath: result.skillPath, threadId: result.threadId, turnId: result.turnId },
+            runner: { executor: 'codex', runtime: result.runtime, ...(result.skillPath ? { skillPath: result.skillPath } : {}), ...(result.promptId ? { promptId: result.promptId } : {}), threadId: result.threadId, turnId: result.turnId },
           })
           if (control.cancelled) {
             await updateJob(jobId, { state: 'cancelled', progress: 0, message: '任务已取消' })

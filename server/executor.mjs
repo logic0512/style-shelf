@@ -51,7 +51,7 @@ export function describeExecutor() {
 export async function startJobRun(jobId) {
   const job = await readJob(jobId)
   if (!job) return null
-  const executorId = ['queued', 'failed', 'waiting_input'].includes(job.state) ? getExecutorId() : job.runner?.executor || getExecutorId()
+  const executorId = job.promptId ? 'codex' : (['queued', 'failed', 'waiting_input'].includes(job.state) ? getExecutorId() : job.runner?.executor || getExecutorId())
   if (job.runner?.executor !== executorId && ['queued', 'failed', 'waiting_input'].includes(job.state)) {
     await updateJob(jobId, { runner: { ...(job.runner || {}), executor: executorId } })
   }

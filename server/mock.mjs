@@ -5,6 +5,7 @@ import { readResults, initializeResults, updateResults } from './store.mjs'
 import { createJob, listJobs, markInterruptedJobs, readJob, updateJob, saveJobInput, queueJobContinuation } from './jobs.mjs'
 import { cancelJobRun, configureExecutor, describeExecutor, initializeExecutorSelection, startJobRun } from './executor.mjs'
 import { createSkill, deleteSkill, listDeletedSkills, listSkills, recordSkillPublication, restoreSkill, updateSkill } from './skills.mjs'
+import { createPrompt, deletePrompt, getPrompt, listPrompts, updatePrompt } from './prompts.mjs'
 import { installSkill, listLocalSkills } from './skill-installer.mjs'
 import { seedBundledSkills } from './bundled-skills.mjs'
 import { ensureStorageLayout, getGeneratedDir, getJobPaths, getStorageStats, getUploadsDir, isPathInside, migrateLegacyStorage } from './storage.mjs'
@@ -234,6 +235,26 @@ const server = createServer(async (request, response) => {
       return
     }
 
+    const promptMatch = request.url.match(/^\/api\/prompts(?:\/([^/]+))?$/)
+    if (request.method === 'GET' && promptMatch && !promptMatch[1]) {
+      sendJson(response, 200, { prompts: await listPrompts() })
+      return
+    }
+    if (request.method === 'POST' && promptMatch && !promptMatch[1]) {
+      sendJson(response, 201, { prompt: await createPrompt(await readBody(request)) })
+      return
+    }
+    if (request.method === 'PATCH' && promptMatch?.[1]) {
+      const prompt = await updatePrompt(decodeURIComponent(promptMatch[1]), await readBody(request))
+      sendJson(response, prompt ? 200 : 404, prompt ? { prompt } : { error: 'prompt_not_found' })
+      return
+    }
+    if (request.method === 'DELETE' && promptMatch?.[1]) {
+      const prompt = await deletePrompt(decodeURIComponent(promptMatch[1]))
+      sendJson(response, prompt ? 200 : 404, prompt ? { deleted: prompt.id } : { error: 'prompt_not_found' })
+      return
+    }
+
     if (request.method === 'GET' && request.url === '/api/results') {
       const results = await readResults()
       if (!validResults(results)) {
@@ -251,8 +272,12 @@ const server = createServer(async (request, response) => {
 
     if (request.method === 'POST' && request.url === '/api/jobs') {
       const payload = await readBody(request)
-      if (typeof payload?.id !== 'string' || typeof payload?.skillId !== 'string') {
-        sendJson(response, 400, { error: 'job_id_and_skill_id_required' })
+      if (typeof payload?.id !== 'string' || (typeof payload?.skillId !== 'string' && typeof payload?.promptId !== 'string') || (payload.skillId && payload.promptId)) {
+        sendJson(response, 400, { error: 'job_id_and_source_required' })
+        return
+      }
+      if (payload.promptId && !await getPrompt(payload.promptId)) {
+        sendJson(response, 404, { error: 'prompt_not_found' })
         return
       }
       sendJson(response, 201, { job: await createJob(payload) })
@@ -445,9 +470,10 @@ const server = createServer(async (request, response) => {
     sendJson(response, 404, { error: 'not_found' })
   } catch (error) {
     const status = error.message === 'payload_too_large' ? 413
-      : error.message === 'skill_already_exists' ? 409
+      : ['skill_already_exists', 'prompt_already_exists'].includes(error.message) ? 409
         : error.message === 'skill_name_not_found' ? 404
-          : error.message === 'unsafe_storage_path' || error.message.startsWith('skill_') || error.message.startsWith('only_') || error.message.startsWith('invalid_') || error.message.startsWith('github_') ? 400 : 500
+          : error.message === 'prompt_not_found' ? 404
+            : error.message === 'unsafe_storage_path' || error.message.startsWith('skill_') || error.message.startsWith('prompt_') || error.message.startsWith('only_') || error.message.startsWith('invalid_') || error.message.startsWith('github_') ? 400 : 500
     sendJson(response, status, { error: status === 500 ? 'internal_error' : error.message })
   }
 })

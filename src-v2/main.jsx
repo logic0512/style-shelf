@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { cancelJob, configureExecutor, continueJob, createJob, deleteResult, deleteSkill, installSkill, jobArtifactUrl, jobInputUrl, loadDeletedSkills, loadHealth, loadJob, loadJobs, loadLocalSkills, loadPersistedResults, loadSkillCatalog, loadStorage, restoreSkill, runJob, saveResult, seedResults, updateJob, uploadJobInput, updateSkill } from './api.js'
+import { cancelJob, configureExecutor, continueJob, createJob, createPrompt, deletePrompt, deleteResult, deleteSkill, installSkill, jobArtifactUrl, jobInputUrl, loadDeletedSkills, loadHealth, loadJob, loadJobs, loadLocalSkills, loadPersistedResults, loadPromptCatalog, loadSkillCatalog, loadStorage, restoreSkill, runJob, saveResult, seedResults, updateJob, updatePrompt, uploadJobInput, updateSkill } from './api.js'
 import './styles.css'
 
 /* ---------------- 数据 ---------------- */
@@ -41,6 +41,15 @@ function formatLocalResultDate(value, fallback = '历史任务') {
   return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${time}`
 }
 
+function findSource(value, skills, prompts) {
+  if (value?.promptId) return prompts.find((item) => item.id === value.promptId) || null
+  return skills.find((item) => item.id === value?.skillId) || null
+}
+
+function matchesSource(value, item) {
+  return item?.kind === 'prompt' ? value?.promptId === item.id : value?.skillId === item?.id
+}
+
 /* ---------------- 卡片视觉：四种独立身份 ---------------- */
 
 function CardVisual({ skill, size = 'card' }) {
@@ -49,7 +58,7 @@ function CardVisual({ skill, size = 'card' }) {
     return (
       <div className={`${cls} visual-photo`}>
         <img src={skill.cover} alt={`${skill.name} 示例`} style={{ objectPosition: `${skill.coverPosition?.x ?? 50}% ${skill.coverPosition?.y ?? 50}%` }} />
-        <span className="photo-caption">SAMPLE 01 · Skill 产出</span>
+        <span className="photo-caption">SAMPLE 01 · {skill.kind === 'prompt' ? 'Prompt 产出' : 'Skill 产出'}</span>
       </div>
     )
   }
@@ -57,13 +66,14 @@ function CardVisual({ skill, size = 'card' }) {
     <div className={`${cls} visual-placeholder visual-needs-sample`}>
       <span className="placeholder-index">{skill.index}</span>
       <strong>尚无真实样例</strong>
-      <span>先运行一次这个 Skill</span>
+      <span>先运行一次这个{skill.kind === 'prompt' ? ' Prompt' : ' Skill'}</span>
       <small>生成后自动填充封面</small>
     </div>
   )
 }
 
 function StudioDescription({ skill }) {
+  if (skill.kind === 'prompt') return <p>{skill.summary || '按这个 Prompt 固定风格规则生成。'}</p>
   if (skill.id !== 'photo-abstract-editorial') return <p>{skill.desc}</p>
   return (
     <div className="studio-description">
@@ -93,7 +103,9 @@ function App() {
   const [view, setView] = useState('shelf')
   const [skills, setSkills] = useState(SKILLS)
   const [skillsReady, setSkillsReady] = useState(false)
-  const [activeSkill, setActiveSkill] = useState(null)
+  const [prompts, setPrompts] = useState([])
+  const [promptsReady, setPromptsReady] = useState(false)
+  const [activeStyle, setActiveStyle] = useState(null)
   const [tasks, setTasks] = useState([])
   const [results, setResults] = useState(SEED_RESULTS)
   const [studioResult, setStudioResult] = useState(null)
@@ -103,14 +115,15 @@ function App() {
   const [workshopOpen, setWorkshopOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [coverEditSkill, setCoverEditSkill] = useState(null)
+  const [promptEditor, setPromptEditor] = useState(null)
   const [coverEditError, setCoverEditError] = useState('')
   const [viewingResult, setViewingResult] = useState(null)
   const [studioPrefill, setStudioPrefill] = useState(null)
   const [confirmState, setConfirmState] = useState(null)
   const taskActionLocksRef = useRef(new Set())
-  const activeSkillIdRef = useRef(null)
+  const activeStyleIdRef = useRef(null)
   const studioDraftTaskIdRef = useRef(null)
-  activeSkillIdRef.current = activeSkill?.id || null
+  activeStyleIdRef.current = activeStyle?.id || null
   studioDraftTaskIdRef.current = studioDraftTaskId
 
   useEffect(() => {
@@ -128,14 +141,24 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!skillsReady) return undefined
+    let cancelled = false
+    loadPromptCatalog().then((catalog) => {
+      if (!cancelled) setPrompts(catalog)
+    }).catch(() => {}).finally(() => {
+      if (!cancelled) setPromptsReady(true)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!skillsReady || !promptsReady) return undefined
     let cancelled = false
     loadPersistedResults().then((persisted) => {
       if (cancelled) return
       if (persisted.length) {
-        const namesById = new Map(skills.map((skill) => [skill.id, skill.name]))
-        setResults(persisted.map((result) => result.skillId && namesById.has(result.skillId)
-          ? { ...result, styleName: namesById.get(result.skillId) }
+        const namesById = new Map([...skills, ...prompts].map((style) => [style.id, style.name]))
+        setResults(persisted.map((result) => (result.skillId || result.promptId) && namesById.has(result.skillId || result.promptId)
+          ? { ...result, styleName: namesById.get(result.skillId || result.promptId) }
           : result))
         setStorageState('ready')
       } else {
@@ -145,13 +168,15 @@ function App() {
     loadJobs().then(async (jobs) => {
       if (cancelled) return
       const restoredTasks = await Promise.all(jobs.map(async (job) => {
-        const skill = skills.find((item) => item.id === job.skillId)
-        const resultVersions = skill ? await buildJobResults(job, skill) : []
+        const style = findSource(job, skills, prompts)
+        const resultVersions = style ? await buildJobResults(job, style) : []
         return {
         id: job.id,
         skillId: job.skillId,
-        name: skill?.name || job.skillId,
-        theme: skill?.theme || 'photo',
+        promptId: job.promptId,
+        name: style?.name || job.skillId || job.promptId,
+        theme: style?.theme || 'photo',
+        kind: style?.kind || (job.promptId ? 'prompt' : 'skill'),
         state: job.state,
         progress: Number.isFinite(job.progress) ? job.progress : 0,
         message: job.message || '已恢复本地任务记录',
@@ -165,23 +190,60 @@ function App() {
         return [...current, ...restoredTasks.filter((task) => !currentIds.has(task.id))]
       })
       jobs.filter((job) => job.state === 'queued').forEach((job) => {
-        const skill = skills.find((item) => item.id === job.skillId)
-        if (!skill) return
-        runJob(job.id).then(() => monitorJob(job.id, skill, job.payload || {})).catch(() => {})
+        const style = findSource(job, skills, prompts)
+        if (!style) return
+        runJob(job.id).then(() => monitorJob(job.id, style, job.payload || {})).catch(() => {})
       })
       jobs.filter((job) => job.state === 'running').forEach((job) => {
-        const skill = skills.find((item) => item.id === job.skillId)
-        if (skill) monitorJob(job.id, skill, job.payload || {})
+        const style = findSource(job, skills, prompts)
+        if (style) monitorJob(job.id, style, job.payload || {})
       })
     }).catch(() => {})
     return () => { cancelled = true }
-  }, [skillsReady]) // 只在启动时恢复一次，Skill 刷新不得重复监听同一 Job
+  }, [skillsReady, promptsReady]) // 只在启动时恢复一次，目录刷新不得重复监听同一 Job
 
   const visibleSkills = skills
 
   async function refreshSkills() {
     const catalog = await loadSkillCatalog()
     setSkills(catalog)
+  }
+
+  async function refreshPrompts() {
+    const catalog = await loadPromptCatalog()
+    setPrompts(catalog)
+  }
+
+  function openPromptEditor(prompt = null) {
+    setPromptEditor(prompt || { name: '', summary: '', mode: 'image', template: '' })
+  }
+
+  async function savePromptForm(input) {
+    const response = promptEditor?.id
+      ? await updatePrompt(promptEditor.id, input)
+      : await createPrompt(input)
+    const saved = response.prompt
+    if (saved) setPrompts((current) => promptEditor?.id
+      ? current.map((item) => item.id === saved.id ? saved : item)
+      : [...current, saved])
+    setPromptEditor(null)
+  }
+
+  function removePromptFromShelf(prompt) {
+    setConfirmState({
+      title: '删除 Prompt',
+      message: `删除「${prompt.name}」？历史任务和图库结果不会被删除。`,
+      confirmLabel: '删除 Prompt',
+      onConfirm: async () => {
+        setConfirmState(null)
+        try {
+          await deletePrompt(prompt.id)
+          setPrompts((current) => current.filter((item) => item.id !== prompt.id))
+        } catch {
+          window.alert('删除失败，请确认本地服务仍在运行。')
+        }
+      },
+    })
   }
 
   async function reorderSkills(sourceId, targetId) {
@@ -218,7 +280,7 @@ function App() {
   function navigateAway(nextView) {
     if (!confirmLeaveStudio()) return
     discardStudioDraft()
-    setActiveSkill(null)
+    setActiveStyle(null)
     if (nextView) setView(nextView)
   }
 
@@ -229,7 +291,7 @@ function App() {
       return
     }
     discardStudioDraft()
-    setActiveSkill(skill)
+    setActiveStyle(skill)
     setStudioPrefill(prefill)
   }
 
@@ -254,7 +316,7 @@ function App() {
     return {
       id: `r-${Date.now()}`,
       jobId: artifact?.jobId || null,
-      skillId: skill.id,
+      ...(skill.kind === 'prompt' ? { promptId: skill.id } : { skillId: skill.id }),
       title: payload.text || payload.fields?.direction || payload.fileName || '未命名结果',
       styleName: skill.name,
       theme: skill.theme,
@@ -335,7 +397,7 @@ function App() {
           const completedResult = resultVersions.at(-1)
           if (!completedResult) throw new Error('本地执行器完成但没有返回图片')
           setTasks((current) => current.map((task) => task.id === id ? { ...task, resultVersions, result: completedResult } : task))
-          if (activeSkillIdRef.current === skill.id && studioDraftTaskIdRef.current === id) {
+          if (activeStyleIdRef.current === skill.id && studioDraftTaskIdRef.current === id) {
             setStudioResult(completedResult)
             setStudioDraftTaskId(id)
           }
@@ -412,7 +474,7 @@ function App() {
   }
 
   function startTask(skill, payload, continuationTaskId = null, parentResult = null) {
-    const existingTask = continuationTaskId && tasks.find((item) => item.id === continuationTaskId && item.skillId === skill.id)
+    const existingTask = continuationTaskId && tasks.find((item) => item.id === continuationTaskId && matchesSource(item, skill))
     if (existingTask) {
       continueTask(skill, payload, existingTask, parentResult)
       return
@@ -421,7 +483,7 @@ function App() {
     const guided = skill.inputSchema?.some((field) => field.type === 'questions' && field.required) && skill.interaction === 'guided_required'
     setTasks((current) => [{
       id,
-      skillId: skill.id,
+      ...(skill.kind === 'prompt' ? { promptId: skill.id } : { skillId: skill.id }),
       name: skill.name,
       theme: skill.theme,
       state: 'queued',
@@ -433,7 +495,8 @@ function App() {
     setStudioDraftTaskId(id)
     const uploadEntries = getUploadEntries(payload)
     const jobPayload = buildJobPayload(payload, uploadEntries)
-    createJob({ id, skillId: skill.id, payload: jobPayload }).then(async ({ job }) => {
+    const source = skill.kind === 'prompt' ? { promptId: skill.id } : { skillId: skill.id }
+    createJob({ id, ...source, payload: jobPayload }).then(async ({ job }) => {
       for (const entry of uploadEntries) await uploadJobInput(job.id, entry.file, entry.filename, entry.fieldId, job.activeTurnId)
       setStorageState('ready')
       setTasks((current) => current.map((t) => t.id === id ? {
@@ -471,7 +534,7 @@ function App() {
   function answerTask(id) {
     if (!beginTaskAction(id)) return
     const task = tasks.find((item) => item.id === id)
-    const skill = skills.find((item) => item.id === task?.skillId)
+    const skill = findSource(task, skills, prompts)
     if (!task || !skill) { endTaskAction(id); return }
     setTasks((current) => current.map((t) => t.id === id ? { ...t, state: 'running', progress: 52, message: '已收到回答，继续生成' } : t))
     runJob(id).then(() => monitorJob(id, skill, task?.payload || {})).catch((error) => {
@@ -497,7 +560,7 @@ function App() {
   function retryTask(id) {
     if (!beginTaskAction(id)) return
     const task = tasks.find((item) => item.id === id)
-    const skill = skills.find((item) => item.id === task?.skillId)
+    const skill = findSource(task, skills, prompts)
     if (!task || !skill) { endTaskAction(id); return }
     setTasks((current) => current.map((item) => item.id === id ? { ...item, state: 'running', progress: 10, message: '正在重试本地 Job' } : item))
     runJob(id).then(() => monitorJob(id, skill, task.payload || {})).catch((error) => {
@@ -518,7 +581,7 @@ function App() {
       window.setTimeout(() => taskElement.classList.remove('task-focus'), 1200)
       return
     }
-    const skill = skills.find((item) => item.id === latest.skillId)
+    const skill = findSource(latest, skills, prompts)
     if (!skill) return
     if (latest.result) {
       openTaskResult(latest)
@@ -529,13 +592,13 @@ function App() {
   }
 
   function openTaskResult(task, selectedResult = null) {
-    const skill = skills.find((item) => item.id === task.skillId)
+    const skill = findSource(task, skills, prompts)
     const selected = selectedResult || task.result
     if (!skill || !selected) return
-    if (activeSkill?.id !== skill.id) {
+    if (activeStyle?.id !== skill.id) {
       if (!confirmLeaveStudio()) return
       discardStudioDraft()
-      setActiveSkill(skill)
+      setActiveStyle(skill)
     }
     setStudioPrefill({
       ...(selected.payload || {}),
@@ -567,7 +630,7 @@ function App() {
   }
 
   async function regenerateResult(result) {
-    const skill = skills.find((item) => item.id === result.skillId) || skills.find((item) => item.name === result.styleName)
+    const skill = findSource(result, skills, prompts) || [...skills, ...prompts].find((item) => item.name === result.styleName)
     if (!skill) return
     const task = result.jobId && tasks.find((item) => item.id === result.jobId)
     if (task) {
@@ -588,18 +651,20 @@ function App() {
     const savedResult = { ...result, coverRatio, coverPosition }
     setSaveError('')
     try {
-      const skill = skills.find((item) => item.id === result.skillId)
+      const skill = findSource(result, skills, prompts)
       if (!skill?.cover && result.jobId && result.image) {
-        const response = await updateSkill(result.skillId, {
+        const update = skill.kind === 'prompt' ? updatePrompt : updateSkill
+        const response = await update(skill.id, {
           cover: result.image,
           coverPosition,
           coverStatus: 'generated',
-          coverSource: 'skill-output',
-          coverFrameRatio: '4:5',
-          ready: true,
+          ...(skill.kind === 'prompt' ? {} : { coverSource: 'skill-output', coverFrameRatio: '4:5', ready: true }),
         })
-        const updated = response.skills?.find((item) => item.id === result.skillId)
-        if (updated) setSkills((current) => current.map((item) => item.id === updated.id ? updated : item))
+        const updated = response.prompt || response.skills?.find((item) => item.id === result.skillId)
+        if (updated) {
+          if (skill.kind === 'prompt') setPrompts((current) => current.map((item) => item.id === updated.id ? updated : item))
+          else setSkills((current) => current.map((item) => item.id === updated.id ? updated : item))
+        }
       }
       const saveResponse = await saveResult(savedResult)
       setResults((current) => [savedResult, ...current.filter((item) => item.id !== savedResult.id)])
@@ -610,11 +675,11 @@ function App() {
       }
       setStorageState('ready')
       discardStudioDraft()
-      setActiveSkill(null)
+      setActiveStyle(null)
       setView('results')
     } catch {
       setStorageState('offline')
-      setSaveError('本地服务未连接，结果和 Skill 封面暂未保存。启动本地服务后可再次点击保存。')
+      setSaveError('本地服务未连接，结果和风格封面暂未保存。启动本地服务后可再次点击保存。')
     }
   }
 
@@ -684,18 +749,18 @@ function App() {
   }
 
   return (
-    <div className={`app app-${activeSkill ? 'studio' : view}`}>
-      <Header view={view} latestTask={tasks[0] || null} onView={navigateAway} onLatestTask={focusLatestTask} storageState={storageState} onAddSkill={() => setWorkshopOpen(true)} onSettings={() => setSettingsOpen(true)} />
+    <div className={`app app-${activeStyle ? 'studio' : view}`}>
+      <Header view={view} latestTask={tasks[0] || null} onView={navigateAway} onLatestTask={focusLatestTask} storageState={storageState} onAddSkill={() => setWorkshopOpen(true)} onAddPrompt={() => openPromptEditor()} onSettings={() => setSettingsOpen(true)} />
       <div className="app-body">
-        <Sidebar view={view} setView={navigateAway} resultCount={results.length} skillCount={skills.length} onSettings={() => setSettingsOpen(true)} />
+        <Sidebar view={view} setView={navigateAway} resultCount={results.length} skillCount={skills.length} promptCount={prompts.length} onSettings={() => setSettingsOpen(true)} />
         <main className="center">
-          {activeSkill ? (
+          {activeStyle ? (
             <CreationStudio
-              skill={activeSkill}
+              skill={activeStyle}
               prefill={studioPrefill}
               result={studioResult}
-              backgroundTaskCount={tasks.filter((task) => task.skillId === activeSkill.id && ['queued', 'running', 'waiting_input'].includes(task.state)).length}
-              taskHistory={tasks.filter((task) => task.skillId === activeSkill.id && task.result)}
+              backgroundTaskCount={tasks.filter((task) => matchesSource(task, activeStyle) && ['queued', 'running', 'waiting_input'].includes(task.state)).length}
+              taskHistory={tasks.filter((task) => matchesSource(task, activeStyle) && task.result)}
               selectedTaskId={studioDraftTaskId}
               selectedTaskState={tasks.find((task) => task.id === studioDraftTaskId)?.state || null}
               selectedTaskMessage={tasks.find((task) => task.id === studioDraftTaskId)?.message || ''}
@@ -709,8 +774,12 @@ function App() {
           ) : view === 'shelf' ? (
             <ShelfView
               skills={visibleSkills}
+              prompts={prompts}
               results={results}
               onOpen={openSkill}
+              onAddPrompt={() => openPromptEditor()}
+              onEditPrompt={openPromptEditor}
+              onRemovePrompt={removePromptFromShelf}
               onViewResults={goResults}
               onViewResult={viewResult}
               onEditCover={(skill) => { setCoverEditError(''); setCoverEditSkill(skill) }}
@@ -718,7 +787,7 @@ function App() {
               onReorder={reorderSkills}
             />
           ) : (
-            <ResultsView results={results} skills={skills} onView={viewResult} onAgain={regenerateResult} onDownload={downloadResult} onDelete={removeResult} />
+            <ResultsView results={results} skills={skills} prompts={prompts} onView={viewResult} onAgain={regenerateResult} onDownload={downloadResult} onDelete={removeResult} />
           )}
         </main>
         <ContextRail
@@ -735,6 +804,7 @@ function App() {
         />
       </div>
       {workshopOpen && <SkillWorkshop skills={skills} onClose={() => setWorkshopOpen(false)} onRefresh={refreshSkills} />}
+      {promptEditor && <PromptEditor prompt={promptEditor} onClose={() => setPromptEditor(null)} onSave={savePromptForm} />}
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
       {coverEditSkill && <SkillCoverEditor skill={coverEditSkill} results={results} error={coverEditError} onClose={() => setCoverEditSkill(null)} onSave={saveSkillCover} />}
       {viewingResult && <ResultViewer result={viewingResult} onClose={() => setViewingResult(null)} />}
@@ -743,7 +813,7 @@ function App() {
   )
 }
 
-function Header({ view, latestTask, onView, onLatestTask, storageState, onAddSkill, onSettings }) {
+function Header({ view, latestTask, onView, onLatestTask, storageState, onAddSkill, onAddPrompt, onSettings }) {
   return (
     <header className="topbar">
       <div className="brand">
@@ -768,6 +838,7 @@ function Header({ view, latestTask, onView, onLatestTask, storageState, onAddSki
           <b>{latestTask ? (latestTask.state === 'running' ? `${latestTask.progress}%` : TASK_STATE_LABEL[latestTask.state]) : '暂无'}</b>
         </button>
         <button className="btn-outline" onClick={onAddSkill}>添加 Skill</button>
+        <button className="btn-outline" onClick={onAddPrompt}>添加 Prompt</button>
         <span className={`storage-status storage-${storageState}`} title="本地结果存储状态">
           {storageState === 'ready' ? '本地已连接' : storageState === 'offline' ? '本地未连接' : '检查本地服务'}
         </span>
@@ -777,7 +848,7 @@ function Header({ view, latestTask, onView, onLatestTask, storageState, onAddSki
   )
 }
 
-function Sidebar({ view, setView, resultCount, skillCount, onSettings }) {
+function Sidebar({ view, setView, resultCount, skillCount, promptCount, onSettings }) {
   return (
     <aside className="sidebar">
       <p className="side-label">工作区</p>
@@ -794,7 +865,7 @@ function Sidebar({ view, setView, resultCount, skillCount, onSettings }) {
           <span className="store-icon">◧</span>
           <div>
             <strong>本地资料库</strong>
-            <small>~/StyleShelf · {skillCount} 个 Skill</small>
+            <small>~/StyleShelf · {skillCount} 个 Skill · {promptCount} 个 Prompt</small>
           </div>
         </div>
         <button className="settings-link" onClick={onSettings}>诊断</button>
@@ -805,9 +876,10 @@ function Sidebar({ view, setView, resultCount, skillCount, onSettings }) {
 
 /* ---------------- 风格仓库（中央主视图） ---------------- */
 
-function ShelfView({ skills, results, onOpen, onViewResults, onViewResult, onEditCover, onRemoveSkill, onReorder }) {
+function ShelfView({ skills, prompts, results, onOpen, onAddPrompt, onEditPrompt, onRemovePrompt, onViewResults, onViewResult, onEditCover, onRemoveSkill, onReorder }) {
   const [draggingId, setDraggingId] = useState(null)
   const [dragOverId, setDragOverId] = useState(null)
+  const [shelfType, setShelfType] = useState('skill')
 
   function clearDrag() {
     setDraggingId(null)
@@ -819,28 +891,21 @@ function ShelfView({ skills, results, onOpen, onViewResults, onViewResult, onEdi
       <div className="shelf-intro">
         <div>
           <h1>我的风格仓库</h1>
-          <p>已加入工作台的 Skill，随时进入创作。</p>
+          <p>{shelfType === 'skill' ? '已加入工作台的 Skill，随时进入创作。' : '已保存的 Prompt 模板，随时进入创作。'}</p>
         </div>
-        <div className="shelf-count"><strong>{skills.length}</strong><span>个风格</span></div>
+        <div className="shelf-count"><strong>{shelfType === 'skill' ? skills.length : prompts.length}</strong><span>个风格</span></div>
       </div>
-      <div className="collection-grid">
-        {skills.map((skill) => (
-          <SkillCard
-            key={skill.id}
-            skill={skill}
-            isDragging={draggingId === skill.id}
-            isDragOver={dragOverId === skill.id && draggingId !== skill.id}
-            onDragStart={() => setDraggingId(skill.id)}
-            onDragOver={() => setDragOverId(skill.id)}
-            onDrop={() => { onReorder(draggingId, skill.id); clearDrag() }}
-            onDragEnd={clearDrag}
-            onOpen={onOpen}
-            onEditCover={onEditCover}
-            onRemoveSkill={onRemoveSkill}
-          />
-        ))}
+      <div className="shelf-tabs" role="tablist" aria-label="风格类型">
+        <button type="button" role="tab" aria-selected={shelfType === 'skill'} className={shelfType === 'skill' ? 'active' : ''} onClick={() => setShelfType('skill')}>Skill 风格</button>
+        <button type="button" role="tab" aria-selected={shelfType === 'prompt'} className={shelfType === 'prompt' ? 'active' : ''} onClick={() => setShelfType('prompt')}>Prompt 风格</button>
       </div>
-      {skills.length === 0 && <div className="empty-hint">没有匹配的风格卡片，换个关键词试试。</div>}
+      {shelfType === 'skill' ? <div className="collection-grid">
+        {skills.map((skill) => <SkillCard key={skill.id} skill={skill} isDragging={draggingId === skill.id} isDragOver={dragOverId === skill.id && draggingId !== skill.id} onDragStart={() => setDraggingId(skill.id)} onDragOver={() => setDragOverId(skill.id)} onDrop={() => { onReorder(draggingId, skill.id); clearDrag() }} onDragEnd={clearDrag} onOpen={onOpen} onEditCover={onEditCover} onRemoveSkill={onRemoveSkill} />)}
+      </div> : <div className="collection-grid">
+        {prompts.map((prompt, index) => <PromptCard key={prompt.id} prompt={{ ...prompt, index: `P.${String(index + 1).padStart(2, '0')}` }} onOpen={onOpen} onEdit={onEditPrompt} onRemove={onRemovePrompt} />)}
+        <button type="button" className="prompt-add-card" onClick={onAddPrompt}><strong>+</strong><span>添加 Prompt</span></button>
+      </div>}
+      {(shelfType === 'skill' ? skills : prompts).length === 0 && <div className="empty-hint">还没有可用的{ shelfType === 'skill' ? ' Skill' : ' Prompt'}。</div>}
       <section className="recent-strip">
         <div className="recent-heading"><h2>最近作品</h2><button onClick={onViewResults}>查看全部 <span>→</span></button></div>
         <div className="recent-row">
@@ -885,6 +950,54 @@ function SkillCard({ skill, isDragging, isDragOver, onDragStart, onDragOver, onD
         <SkillSource skill={skill} compact />
       </div>
     </article>
+  )
+}
+
+function PromptCard({ prompt, onOpen, onEdit, onRemove }) {
+  return (
+    <article className="skill-card prompt-card">
+      <button className="card-visual" onClick={() => onOpen(prompt)} aria-label={`打开 ${prompt.name} 的工作区`}>
+        <CardVisual skill={prompt} />
+        <span className="open-hint">打开工作区 ↗</span>
+      </button>
+      <div className="card-body">
+        <div className="card-names"><h2 title={prompt.name}>{prompt.name}</h2><span className="prompt-mark">PROMPT</span></div>
+        <span className="card-en">{prompt.modeLabel}</span>
+        <p className="card-desc">{prompt.summary || '按这个 Prompt 的固定风格规则生成。'}</p>
+        <button className="card-cover-edit" type="button" onClick={() => onEdit(prompt)}>编辑 Prompt</button>
+        <button className="card-skill-remove" type="button" onClick={() => onRemove(prompt)}>删除 Prompt</button>
+      </div>
+      <div className="card-foot"><div className="skill-tag-row"><span className="skill-tag">{prompt.modeLabel}</span><span className="skill-tag">{prompt.index}</span></div><span className="prompt-fixed-label">固定模板</span></div>
+    </article>
+  )
+}
+
+function PromptEditor({ prompt, onClose, onSave }) {
+  const [values, setValues] = useState({ name: prompt.name || '', summary: prompt.summary || '', mode: prompt.mode || 'image', template: prompt.template || '' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function submit(event) {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try { await onSave(values) } catch (saveError) { setError(saveError.message || 'Prompt 保存失败') } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="workshop-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <section className="workshop-panel prompt-editor" role="dialog" aria-modal="true" aria-labelledby="prompt-editor-title">
+        <div className="workshop-head"><div><p className="kicker">PROMPT TEMPLATE</p><h2 id="prompt-editor-title">{prompt.id ? '编辑 Prompt' : '添加 Prompt'}</h2><p>保存可用于多个主体的固定风格规则；单张图片专用描述不适合作为模板。</p></div><button className="workshop-close" type="button" onClick={onClose} aria-label="关闭">×</button></div>
+        <form className="workshop-form" onSubmit={submit}>
+          <label className="field"><span>名称</span><input value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} required maxLength={200} /></label>
+          <label className="field"><span>说明（可选）</span><input value={values.summary} onChange={(event) => setValues((current) => ({ ...current, summary: event.target.value }))} maxLength={500} /></label>
+          <div className="field"><span>类型</span><div className="prompt-mode-options"><label><input type="radio" name="prompt-mode" value="image" checked={values.mode === 'image'} onChange={() => setValues((current) => ({ ...current, mode: 'image' }))} />图片转化型</label><label><input type="radio" name="prompt-mode" value="text" checked={values.mode === 'text'} onChange={() => setValues((current) => ({ ...current, mode: 'text' }))} />纯文本生成型</label></div></div>
+          <label className="field"><span>固定 Prompt 正文</span><textarea value={values.template} onChange={(event) => setValues((current) => ({ ...current, template: event.target.value }))} required maxLength={30000} rows={10} /></label>
+          {error && <p className="workshop-error" role="alert">{error}</p>}
+          <button className="run workshop-save" type="submit" disabled={saving}>{saving ? '正在保存…' : '保存 Prompt'}</button>
+        </form>
+      </section>
+    </div>
   )
 }
 
@@ -1137,16 +1250,16 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
         <div>
           <h1>{skill.name}</h1>
           <StudioDescription skill={skill} />
-          <SkillSource skill={skill} />
+          {skill.kind !== 'prompt' && <SkillSource skill={skill} />}
         </div>
-        <span className="studio-ver">本地 Skill · {formatSkillVersion(skill.version)}</span>
+        <span className="studio-ver">{skill.kind === 'prompt' ? 'Prompt 模板' : `本地 Skill · ${formatSkillVersion(skill.version)}`}</span>
       </div>
 
       <div className="studio-cols">
         <form className="studio-form" onSubmit={submit}>
           <div className="form-head">
             <strong>输入</strong>
-            <span>{skill.needsReview ? '输入能力尚未完全确认，图片和文字都可以尝试' : '输入会按这个 Skill 自己的方式处理'}</span>
+            <span>{skill.kind === 'prompt' ? '输入会和固定 Prompt 一起发送' : (skill.needsReview ? '输入能力尚未完全确认，图片和文字都可以尝试' : '输入会按这个 Skill 自己的方式处理')}</span>
           </div>
 
           {inputSchema.map(renderField)}
@@ -1160,10 +1273,10 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
           )}
 
           <button className="run" type="submit" disabled={!ready || continuationBusy}>
-            <span>{continuing ? '继续修改当前任务' : '运行这个 Skill'}</span><b>{continuationBusy ? (selectedTaskMessage || '后台处理中') : backgroundTaskCount ? `后台已有 ${backgroundTaskCount} 个` : '⌘ ↵'}</b>
+            <span>{continuing ? '继续修改当前任务' : `运行这个${skill.kind === 'prompt' ? ' Prompt' : ' Skill'}`}</span><b>{continuationBusy ? (selectedTaskMessage || '后台处理中') : backgroundTaskCount ? `后台已有 ${backgroundTaskCount} 个` : '⌘ ↵'}</b>
           </button>
           {result && selectedTaskId && <button className="studio-new-task" type="button" onClick={onNewTask}>新建独立任务</button>}
-          <p className="phase-note">Phase 4 Dynamic Inputs · 输入由当前 Skill 的配置决定</p>
+          <p className="phase-note">输入由当前{skill.kind === 'prompt' ? ' Prompt' : ' Skill'} 的配置决定</p>
         </form>
 
         <aside className="studio-side">
@@ -1180,7 +1293,7 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
             <dl className="param-list">
               <div><dt>输入方式</dt><dd>{skill.modeLabel}</dd></div>
               <div><dt>执行引擎</dt><dd>本地执行器 · 按当前配置运行</dd></div>
-              <div><dt>Skill 版本</dt><dd>{formatSkillVersion(skill.version)}</dd></div>
+              <div><dt>{skill.kind === 'prompt' ? '模板类型' : 'Skill 版本'}</dt><dd>{skill.kind === 'prompt' ? skill.modeLabel : formatSkillVersion(skill.version)}</dd></div>
               <div><dt>输出位置</dt><dd>jobs/&lt;job-id&gt;/output</dd></div>
             </dl>
           </div>
@@ -1196,14 +1309,15 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
           onSave={() => onSaveResult(result, coverRatio, coverPosition)}
           saveError={saveError}
           needsCover={!skill.cover}
+          sourceKind={skill.kind}
         />
       )}
-      {taskHistory.length > 0 && <TaskResultHistory tasks={taskHistory} selectedTaskId={selectedTaskId} onSelect={onSelectTaskResult} />}
+      {taskHistory.length > 0 && <TaskResultHistory tasks={taskHistory} styleName={skill.name} sourceKind={skill.kind} selectedTaskId={selectedTaskId} onSelect={onSelectTaskResult} />}
     </section>
   )
 }
 
-function TaskResultHistory({ tasks, selectedTaskId, onSelect }) {
+function TaskResultHistory({ tasks, styleName, sourceKind, selectedTaskId, onSelect }) {
   const entries = tasks.flatMap((task) => {
     const grouped = new Map()
     const results = task.resultVersions?.length ? task.resultVersions : task.result ? [task.result] : []
@@ -1218,7 +1332,7 @@ function TaskResultHistory({ tasks, selectedTaskId, onSelect }) {
   return (
     <section className="task-result-history">
       <div className="task-result-history-head">
-        <div><p className="kicker">RUN HISTORY</p><h2>这个 Skill 的运行成果</h2></div>
+        <div><p className="kicker">RUN HISTORY</p><h2>这个{sourceKind === 'prompt' ? ' Prompt' : ' Skill'} 的运行成果</h2></div>
         <span>{entries.length} 个版本 · {tasks.length} 个任务</span>
       </div>
       <div className="task-result-history-list">
@@ -1233,7 +1347,7 @@ function TaskResultHistory({ tasks, selectedTaskId, onSelect }) {
   )
 }
 
-function GeneratedResultPanel({ result, ratio, position, onRatioChange, onPositionChange, onSave, saveError, needsCover }) {
+function GeneratedResultPanel({ result, ratio, position, onRatioChange, onPositionChange, onSave, saveError, needsCover, sourceKind = 'skill' }) {
   const dragging = useRef(false)
 
   function updatePosition(clientX, clientY, element) {
@@ -1264,7 +1378,7 @@ function GeneratedResultPanel({ result, ratio, position, onRatioChange, onPositi
         <div>
           <p className="kicker">RESULT READY</p>
           <h2>生成完成，保存这张作品</h2>
-          <p>{needsCover ? '这是该 Skill 的首次产出，保存后会同时作为风格卡片封面。' : '先选择图库的封面比例，再保存。原图尺寸不会被裁切。'}</p>
+          <p>{needsCover ? `这是该${sourceKind === 'prompt' ? ' Prompt' : ' Skill'} 的首次产出，保存后会同时作为风格卡片封面。` : '先选择图库的封面比例，再保存。原图尺寸不会被裁切。'}</p>
         </div>
         <span className="generated-status">待保存</span>
       </div>
@@ -1355,7 +1469,7 @@ function ResultViewer({ result, onClose }) {
 
 /* ---------------- 图库 ---------------- */
 
-function ResultsView({ results, skills, onView, onAgain, onDownload, onDelete }) {
+function ResultsView({ results, skills, prompts, onView, onAgain, onDownload, onDelete }) {
   const [columnCount, setColumnCount] = useState(4)
   const [filterSkillId, setFilterSkillId] = useState('all')
 
@@ -1377,18 +1491,26 @@ function ResultsView({ results, skills, onView, onAgain, onDownload, onDelete })
     })
     .map(({ result }) => result), [results])
   const skillIdByName = useMemo(() => new Map(skills.map((skill) => [skill.name, skill.id])), [skills])
-  const categoryKey = (result) => result.skillId || (result.styleName && skillIdByName.has(result.styleName)
-    ? skillIdByName.get(result.styleName)
-    : `name:${result.styleName}`)
+  const promptIdByName = useMemo(() => new Map(prompts.map((prompt) => [prompt.name, prompt.id])), [prompts])
+  const categoryKey = (result) => result.promptId
+    ? `prompt:${result.promptId}`
+    : result.skillId
+      ? `skill:${result.skillId}`
+      : result.styleName && promptIdByName.has(result.styleName)
+        ? `prompt:${promptIdByName.get(result.styleName)}`
+        : result.styleName && skillIdByName.has(result.styleName)
+          ? `skill:${skillIdByName.get(result.styleName)}`
+          : `name:${result.styleName}`
   const filterOptions = useMemo(() => {
     const options = new Map()
-    const skillNames = new Map(skills.map((skill) => [skill.id, skill.name]))
+    const skillNames = new Map(skills.map((skill) => [`skill:${skill.id}`, skill.name]))
+    const promptNames = new Map(prompts.map((prompt) => [`prompt:${prompt.id}`, prompt.name]))
     orderedResults.forEach((result) => {
       const id = categoryKey(result)
-      if (!options.has(id)) options.set(id, skillNames.get(id) || result.styleName || id.replace(/^name:/, ''))
+      if (!options.has(id)) options.set(id, skillNames.get(id) || promptNames.get(id) || result.styleName || id.replace(/^(skill|prompt|name):/, ''))
     })
     return [...options.entries()]
-  }, [orderedResults, skills, skillIdByName])
+  }, [orderedResults, skills, prompts, skillIdByName, promptIdByName])
   const filteredResults = filterSkillId === 'all'
     ? orderedResults
     : orderedResults.filter((result) => categoryKey(result) === filterSkillId)

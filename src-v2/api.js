@@ -31,6 +31,23 @@ export async function deleteSkill(skillId) {
   return request(`/api/skills/${encodeURIComponent(skillId)}`, { method: 'DELETE' })
 }
 
+export async function loadPromptCatalog() {
+  const payload = await request('/api/prompts')
+  return Array.isArray(payload.prompts) ? payload.prompts : []
+}
+
+export async function createPrompt(prompt) {
+  return request('/api/prompts', { method: 'POST', body: JSON.stringify(prompt) })
+}
+
+export async function updatePrompt(promptId, patch) {
+  return request(`/api/prompts/${encodeURIComponent(promptId)}`, { method: 'PATCH', body: JSON.stringify(patch) })
+}
+
+export async function deletePrompt(promptId) {
+  return request(`/api/prompts/${encodeURIComponent(promptId)}`, { method: 'DELETE' })
+}
+
 export async function loadDeletedSkills() {
   const payload = await request('/api/skills/trash')
   return Array.isArray(payload.skills) ? payload.skills : []

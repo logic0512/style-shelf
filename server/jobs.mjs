@@ -57,9 +57,11 @@ function enqueueJobWrite(operation) {
   return next
 }
 
-export async function createJob({ id, skillId, payload }) {
+export async function createJob({ id, skillId, promptId, payload }) {
   assertJobId(id)
-  if (typeof skillId !== 'string' || !skillId.trim() || skillId.length > 200) throw new Error('invalid_skill_id')
+  const hasSkill = typeof skillId === 'string' && skillId.trim() && skillId.length <= 200
+  const hasPrompt = typeof promptId === 'string' && promptId.trim() && promptId.length <= 200
+  if (Boolean(hasSkill) === Boolean(hasPrompt)) throw new Error('invalid_job_source')
   const now = new Date().toISOString()
   const initialTurnId = 'turn-01'
   const initialPayload = payload && typeof payload === 'object' ? payload : {}
@@ -68,7 +70,7 @@ export async function createJob({ id, skillId, payload }) {
     await ensureStorageDirectory(dirname(paths.outputDir), getTempDir())
     return writeJob({
       id,
-      skillId,
+      ...(hasSkill ? { skillId } : { promptId }),
       state: 'queued',
       message: '任务已创建，等待本地执行器',
       payload: initialPayload,

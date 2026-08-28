@@ -1158,6 +1158,25 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   break-inside: avoid;
   vertical-align: top;
 }
+
+.shelf-tabs { display: flex; gap: 8px; max-width: 1500px; margin: 0 auto 22px; border-bottom: 1px solid var(--line); }
+.shelf-tabs button { padding: 9px 2px 11px; margin-right: 16px; border-bottom: 2px solid transparent; color: var(--ink-3); font-size: 12px; }
+.shelf-tabs button.active { border-bottom-color: var(--accent); color: var(--ink); }
+.prompt-mark { color: var(--accent); font: 9px var(--mono); letter-spacing: .08em; white-space: nowrap; }
+.prompt-fixed-label { color: var(--ink-3); font: 10px var(--mono); }
+.prompt-add-card { display: grid; place-items: center; align-content: center; gap: 8px; min-height: 430px; border: 1px dashed var(--line); background: transparent; color: var(--ink-3); }
+.prompt-add-card strong { font-size: 28px; font-weight: 400; color: var(--accent); }
+.prompt-add-card span { font-size: 12px; }
+.prompt-add-card:hover { border-color: var(--accent); color: var(--accent); }
+.prompt-editor { width: min(680px, 100%); }
+.prompt-mode-options { display: flex; flex-wrap: wrap; gap: 18px; }
+.prompt-mode-options label { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: 12px; }
+.prompt-mode-options input { accent-color: var(--accent); }
+
+@media (max-width: 760px) {
+  .shelf-tabs { margin-bottom: 18px; }
+  .prompt-add-card { min-height: 180px; }
+}
 .app-results .result-thumb {
   position: relative;
   aspect-ratio: 4 / 3;

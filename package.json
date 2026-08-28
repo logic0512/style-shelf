@@ -1,7 +1,7 @@
 {
   "name": "style-shelf",
   "private": true,
-  "version": "0.1.8",
+  "version": "0.2.0",
   "license": "MIT",
   "description": "Local-first image style Skill workbench",
   "author": "Style Shelf contributors",
@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "node --test test/*.test.mjs",
     "preview": "vite preview",
     "start:mock": "node server/mock.mjs",
     "setup": "node scripts/setup.mjs",
@@ -38,20 +39,19 @@
     "directories": {
       "output": "release"
     },
+    "afterPack": "scripts/prune-electron-locales.mjs",
     "files": [
       "dist/**/*",
       "server/**/*",
       "electron/**/*",
       "scripts/load-env.mjs",
       "bundled-skills/**/*",
-      "public/**/*",
       "LICENSE",
       "THIRD_PARTY_NOTICES.md",
       "package.json"
     ],
     "asarUnpack": [
       "dist/**/*",
-      "public/**/*",
       "server/**/*",
       "electron/**/*",
       "bundled-skills/**/*",
@@ -60,6 +60,10 @@
     "mac": {
       "icon": "build/icon.icns",
       "category": "public.app-category.graphics-design",
+      "electronLanguages": [
+        "en",
+        "zh_CN"
+      ],
       "target": [
         "dmg",
         "zip"
@@ -67,6 +71,10 @@
     },
     "win": {
       "icon": "build/icon.png",
+      "electronLanguages": [
+        "en-US",
+        "zh-CN"
+      ],
       "target": [
         "nsis"
       ]
@@ -74,6 +82,10 @@
     "linux": {
       "icon": "build/icon.png",
       "category": "Graphics",
+      "electronLanguages": [
+        "en-US",
+        "zh-CN"
+      ],
       "target": [
         "AppImage"
       ]

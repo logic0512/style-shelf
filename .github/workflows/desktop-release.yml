@@ -30,6 +30,7 @@ jobs:
       - run: npm ci
       - run: npm run bootstrap
       - run: npm run check:bundled-licenses
+      - run: npm test
       - run: npm run ${{ matrix.command }}
       - uses: actions/upload-artifact@v4
         with:

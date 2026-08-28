@@ -6,7 +6,7 @@ import { getDataDir } from './storage.mjs'
 import { resolveSkillMetadata } from './skill-metadata.mjs'
 
 const skillsFile = join(getDataDir(), 'skills.json')
-const seedFile = join(process.cwd(), 'public', 'skill-catalog.json')
+const seedFile = join(process.env.STYLE_SHELF_WEB_ROOT || join(process.cwd(), 'public'), 'skill-catalog.json')
 const codexSkillsRoot = join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'skills')
 const ID = /^[a-z0-9][a-z0-9._-]{1,119}$/
 const FIELD_TYPES = new Set(['image', 'textarea', 'ratio', 'select', 'questions'])

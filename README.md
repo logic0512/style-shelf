@@ -21,6 +21,9 @@ Style Shelf turns image-generation Skills into visual, searchable, directly runn
 - 同时运行多个本地 Job，保留每轮结果，并在同一 Job 上继续修改。
 - 把发布的作品存入本地图库，原图与 `4:3` / `3:4` 展示封面分开保存。
 - 从本机 Codex Skill 目录导入，或从 GitHub 仓库安装 Skill。移出工作台不会删除原 Skill。
+- 风格仓库分别展示 Skill 风格和 Prompt 风格。
+- Prompt 支持图片转化型和纯文本生成型，并复用现有创作工作区和图库。
+- Prompt 本地保存在 `<data-dir>/prompts.json`，不会生成或修改 `SKILL.md`。
 - 在系统文件管理器中直接查看和清理 `Uploads` 与 `Generated` 图片目录。
 
 ### 执行方式
@@ -123,6 +126,9 @@ npm run desktop                # Electron 开发启动
 - Run multiple local Jobs, keep every turn, and continue editing the same Job with a new instruction.
 - Publish selected outputs to a local gallery while keeping the original image separate from its `4:3` or `3:4` display crop.
 - Import installed Codex Skills or install a Skill from GitHub. Removing a Skill from the workbench never deletes the original Skill.
+- Browse Skill styles and Prompt styles as separate collections in the same style shelf.
+- Use image-transformation or text-to-image Prompt templates in the existing creation workspace and gallery.
+- Store Prompt templates locally in `<data-dir>/prompts.json` without generating or modifying `SKILL.md`.
 - Open and clean the user-visible `Uploads` and `Generated` folders in the system file manager.
 
 ### Execution backends
