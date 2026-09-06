@@ -199,7 +199,7 @@ export async function saveJobInput(id, filename, buffer, mime, fieldId = '', tur
 
 export async function saveJobArtifact(id, sourcePath, mime, turnId = '') {
   assertJobId(id)
-  if (typeof sourcePath !== 'string' || !sourcePath.startsWith('/')) throw new Error('invalid_artifact_path')
+  if (typeof sourcePath !== 'string' || !isAbsolute(sourcePath)) throw new Error('invalid_artifact_path')
   return enqueueJobWrite(async () => {
     const current = await readJobUnsafe(id)
     if (!current) return null
