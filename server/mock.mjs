@@ -8,7 +8,7 @@ import { createSkill, deleteSkill, listDeletedSkills, listSkills, recordSkillPub
 import { createPrompt, deletePrompt, getPrompt, listPrompts, updatePrompt } from './prompts.mjs'
 import { installSkill, listLocalSkills } from './skill-installer.mjs'
 import { seedBundledSkills } from './bundled-skills.mjs'
-import { ensureStorageLayout, getGeneratedDir, getJobPaths, getStorageStats, getUploadsDir, isPathInside, migrateLegacyStorage } from './storage.mjs'
+import { ensureStorageLayout, getDataDir, getGeneratedDir, getJobPaths, getStorageStats, getUploadsDir, isPathInside, migrateLegacyStorage } from './storage.mjs'
 
 const port = Number(process.env.STYLE_SHELF_PORT || 4317)
 const frontendPort = process.env.STYLE_SHELF_FRONTEND_PORT || '4173'
@@ -39,7 +39,7 @@ function validImageReference(image) {
   if (typeof image !== 'string' || image.length > 2000) return false
   if (image.startsWith('/skill-assets/')) return true
   try {
-    const url = new URL(image)
+    const url = new URL(image, 'http://127.0.0.1')
     return ['127.0.0.1', 'localhost'].includes(url.hostname) && url.pathname.startsWith('/api/jobs/')
   } catch {
     return false
@@ -103,6 +103,10 @@ async function serveWebAsset(request, response) {
     return true
   }
   let asset = candidate
+  if (pathname.startsWith('/skill-assets/')) {
+    const localCover = await safeAssetPath(resolve(getDataDir(), requested), [join(getDataDir(), 'skill-assets')])
+    if (localCover && (await stat(localCover)).isFile()) asset = localCover
+  }
   try {
     const info = await stat(asset)
     if (!info.isFile()) throw Object.assign(new Error('not_file'), { code: 'ENOENT' })

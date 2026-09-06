@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { getDataDir } from './storage.mjs'
+import { resultImage } from './store.mjs'
 
 const promptsFile = join(getDataDir(), 'prompts.json')
 const ID = /^[a-z0-9][a-z0-9._-]{1,119}$/
@@ -89,7 +90,7 @@ function validCoverReference(cover) {
   if (typeof cover !== 'string' || cover.length === 0 || cover.length > 2000) return false
   if (cover.startsWith('/skill-assets/')) return true
   try {
-    const parsed = new URL(cover)
+    const parsed = new URL(cover, 'http://127.0.0.1')
     return ['localhost', '127.0.0.1'].includes(parsed.hostname) && parsed.pathname.startsWith('/api/jobs/')
   } catch {
     return false
@@ -103,6 +104,7 @@ function validPrompt(prompt) {
     typeof prompt.summary === 'string' && prompt.summary.length <= 500 &&
     typeof prompt.template === 'string' && prompt.template.trim() && prompt.template.length <= 30000 &&
     MODES.has(prompt.mode) && validCoverReference(prompt.cover) &&
+    (prompt.coverFit === undefined || ['contain', 'cover'].includes(prompt.coverFit)) &&
     (!prompt.coverPosition || (Number.isFinite(prompt.coverPosition.x) && Number.isFinite(prompt.coverPosition.y) && prompt.coverPosition.x >= 0 && prompt.coverPosition.x <= 100 && prompt.coverPosition.y >= 0 && prompt.coverPosition.y <= 100)) &&
     typeof prompt.createdAt === 'string' && typeof prompt.updatedAt === 'string'
   )
@@ -124,6 +126,7 @@ function inputSchema(prompt) {
 function decorate(prompt) {
   return {
     ...prompt,
+    cover: resultImage(prompt.cover),
     kind: 'prompt',
     english: 'PROMPT TEMPLATE',
     modeLabel: prompt.mode === 'image' ? '图片转化' : '纯文本生成',
@@ -147,7 +150,8 @@ async function readPromptsUnsafe() {
 async function writePromptsUnsafe(prompts) {
   await mkdir(getDataDir(), { recursive: true })
   const tempFile = `${promptsFile}.${process.pid}.${Date.now()}.tmp`
-  await writeFile(tempFile, `${JSON.stringify(prompts, null, 2)}\n`, 'utf8')
+  const stored = prompts.map((prompt) => ({ ...prompt, cover: resultImage(prompt.cover, '') }))
+  await writeFile(tempFile, `${JSON.stringify(stored, null, 2)}\n`, 'utf8')
   await rename(tempFile, promptsFile)
   return prompts
 }
@@ -204,6 +208,7 @@ export function updatePrompt(id, patch = {}) {
       ...(MODES.has(patch.mode) ? { mode: patch.mode } : {}),
       ...(Object.prototype.hasOwnProperty.call(patch, 'cover') ? { cover: patch.cover } : {}),
       ...(Object.prototype.hasOwnProperty.call(patch, 'coverPosition') ? { coverPosition: patch.coverPosition } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, 'coverFit') ? { coverFit: patch.coverFit } : {}),
       updatedAt: new Date().toISOString(),
       id,
     }

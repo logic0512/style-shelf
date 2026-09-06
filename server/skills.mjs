@@ -3,6 +3,7 @@ import { access, constants } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { getDataDir } from './storage.mjs'
+import { resultImage } from './store.mjs'
 import { resolveSkillMetadata } from './skill-metadata.mjs'
 
 const skillsFile = join(getDataDir(), 'skills.json')
@@ -26,7 +27,7 @@ function validCoverReference(cover) {
   if (typeof cover !== 'string' || cover.length === 0 || cover.length > 2000) return false
   if (cover.startsWith('/skill-assets/')) return true
   try {
-    const parsed = new URL(cover)
+    const parsed = new URL(cover, 'http://127.0.0.1')
     return ['localhost', '127.0.0.1'].includes(parsed.hostname) && parsed.pathname.startsWith('/api/jobs/')
   } catch {
     return false
@@ -64,6 +65,7 @@ function validSkill(skill) {
     (skill.needsReview === undefined || typeof skill.needsReview === 'boolean') &&
     (!skill.inputContractSource || typeof skill.inputContractSource === 'string') &&
     COVER_STATUSES.has(coverStatus) && (!skill.coverFrameRatio || COVER_FRAME_RATIOS.has(skill.coverFrameRatio)) &&
+    (skill.coverFit === undefined || ['contain', 'cover'].includes(skill.coverFit)) &&
     (coverStatus === 'needs_sample' ? !skill.cover : hasCover)
   )
 }
@@ -78,6 +80,7 @@ async function readSeed() {
 }
 
 async function withInstallStatus(skill) {
+  skill = { ...skill, cover: resultImage(skill.cover), ...(Array.isArray(skill.samples) ? { samples: skill.samples.map((image) => resultImage(image)) } : {}) }
   if (skill.distribution !== 'external') return { ...skill, installed: true }
   const skillPath = join(codexSkillsRoot, skill.id, 'SKILL.md')
   const installed = await new Promise((resolve) => access(skillPath, constants.R_OK, (error) => resolve(!error)))
@@ -142,16 +145,18 @@ async function readSkillsUnsafe() {
         })
       }))
     }
+    throw new Error('invalid_skills_store')
   } catch (error) {
-    if (error.code !== 'ENOENT') throw error
+    if (error.code === 'ENOENT') return readSeed()
+    throw new Error('invalid_skills_store', { cause: error })
   }
-  return readSeed()
 }
 
 async function writeSkillsUnsafe(skills) {
   await mkdir(getDataDir(), { recursive: true })
   const tempFile = `${skillsFile}.${process.pid}.${Date.now()}.tmp`
-  await writeFile(tempFile, `${JSON.stringify(skills, null, 2)}\n`, 'utf8')
+  const stored = skills.map((skill) => ({ ...skill, cover: resultImage(skill.cover, ''), ...(Array.isArray(skill.samples) ? { samples: skill.samples.map((image) => resultImage(image, '')) } : {}) }))
+  await writeFile(tempFile, `${JSON.stringify(stored, null, 2)}\n`, 'utf8')
   await rename(tempFile, skillsFile)
   return skills
 }

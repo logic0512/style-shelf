@@ -1,14 +1,9 @@
-const API_BASE = globalThis.styleShelfDesktop?.apiBase || import.meta.env.VITE_API_BASE || 'http://127.0.0.1:4317'
+const API_BASE = globalThis.styleShelfDesktop?.apiBase || import.meta.env?.VITE_API_BASE || (import.meta.env?.DEV ? 'http://127.0.0.1:4317' : globalThis.location?.origin || 'http://127.0.0.1:4317')
 
 export async function loadSkillCatalog() {
-  try {
-    const payload = await request('/api/skills')
-    if (Array.isArray(payload.skills)) return payload.skills.filter(validSkill)
-  } catch {}
-  const response = await fetch('/skill-catalog.json', { cache: 'no-store' })
-  if (!response.ok) throw new Error(`skill_catalog_${response.status}`)
-  const skills = await response.json()
-  return Array.isArray(skills) ? skills.filter(validSkill) : []
+  const payload = await request('/api/skills')
+  if (!Array.isArray(payload.skills) || !payload.skills.every(validSkill)) throw new Error('invalid_skills_catalog')
+  return payload.skills
 }
 
 function validSkill(skill) {

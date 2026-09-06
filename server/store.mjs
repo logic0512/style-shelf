@@ -6,10 +6,28 @@ const dataDir = getDataDir()
 const resultsFile = join(dataDir, 'results.json')
 let writeChain = Promise.resolve()
 
+export function resultImage(image, base = `http://127.0.0.1:${Number(process.env.STYLE_SHELF_PORT || 4317)}`) {
+  if (typeof image !== 'string') return image
+  try {
+    const url = new URL(image, 'http://127.0.0.1')
+    if (!['http:', 'https:'].includes(url.protocol) ||
+        !['127.0.0.1', 'localhost'].includes(url.hostname) ||
+        !/^\/api\/jobs\/[^/]+\/output\/[^/]+$/.test(url.pathname)) return image
+    return `${base}${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return image
+  }
+}
+
 async function readResultsUnsafe() {
   await mkdir(dataDir, { recursive: true })
   try {
-    return JSON.parse(await readFile(resultsFile, 'utf8'))
+    const results = JSON.parse(await readFile(resultsFile, 'utf8'))
+    const base = `http://127.0.0.1:${Number(process.env.STYLE_SHELF_PORT || 4317)}`
+    return Array.isArray(results)
+      ? results.map((result) => result && typeof result === 'object'
+        ? { ...result, image: resultImage(result.image, base) } : result)
+      : results
   } catch (error) {
     if (error.code === 'ENOENT') return []
     throw error
@@ -19,7 +37,8 @@ async function readResultsUnsafe() {
 async function writeResultsUnsafe(results) {
   await mkdir(dataDir, { recursive: true })
   const tempFile = `${resultsFile}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`
-  await writeFile(tempFile, `${JSON.stringify(results, null, 2)}\n`, 'utf8')
+  const stored = results.map((result) => ({ ...result, image: resultImage(result.image, '') }))
+  await writeFile(tempFile, `${JSON.stringify(stored, null, 2)}\n`, 'utf8')
   await rename(tempFile, resultsFile)
   return results
 }

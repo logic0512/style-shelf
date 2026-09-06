@@ -126,6 +126,7 @@ Prompt 模板保存在 `<data-dir>/prompts.json`，不会生成或修改 `SKILL.
 - [贡献说明](CONTRIBUTING.md)
 - [隐私与凭据边界](docs/PRIVACY.md)
 - [故障排查](docs/TROUBLESHOOTING.md)
+- [0.2.1 图片索引与卡片修复回顾](docs/RELIABILITY_REVIEW.md)
 - [Skill 元数据规则](docs/SKILL_METADATA_RULES.md)
 - [WorkBuddy 连接与接口预留](docs/WORKBUDDY_CONNECTION_TEST.md)
 

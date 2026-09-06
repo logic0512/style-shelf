@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { cancelJob, configureExecutor, continueJob, createJob, createPrompt, deletePrompt, deleteResult, deleteSkill, installSkill, jobArtifactUrl, jobInputUrl, loadDeletedSkills, loadHealth, loadJob, loadJobs, loadLocalSkills, loadPersistedResults, loadPromptCatalog, loadSkillCatalog, loadStorage, restoreSkill, runJob, saveResult, seedResults, updateJob, updatePrompt, uploadJobInput, updateSkill } from './api.js'
 import { LocaleProvider, useI18n } from './i18n.js'
+import { getStyleSummary, getStyleSourceUrl } from './style-summary.js'
 import './styles.css'
 
 /* ---------------- 数据 ---------------- */
@@ -59,7 +60,7 @@ function CardVisual({ skill, size = 'card' }) {
   if (skill.cover) {
     return (
       <div className={`${cls} visual-photo`}>
-        <img src={skill.cover} alt={`${skill.name} 示例`} style={{ objectPosition: `${skill.coverPosition?.x ?? 50}% ${skill.coverPosition?.y ?? 50}%` }} />
+        <img src={skill.cover} alt={`${skill.name} 示例`} style={{ objectFit: skill.coverFit === 'cover' ? 'cover' : 'contain', objectPosition: skill.coverFit === 'cover' ? `${skill.coverPosition?.x ?? 50}% ${skill.coverPosition?.y ?? 50}%` : '50% 50%' }} />
         <span className="photo-caption">SAMPLE 01 · {skill.kind === 'prompt' ? 'Prompt 产出' : 'Skill 产出'}</span>
       </div>
     )
@@ -76,15 +77,20 @@ function CardVisual({ skill, size = 'card' }) {
 
 function StudioDescription({ skill }) {
   const { t } = useI18n()
-  if (skill.kind === 'prompt') return <p>{t(skill.summary || '按这个 Prompt 固定风格规则生成。')}</p>
-  if (skill.id !== 'photo-abstract-editorial') return <p>{t(skill.desc)}</p>
+  const summary = getStyleSummary(skill, 96)
+  const full = skill.kind === 'prompt' ? skill.summary : skill.desc
+  const source = getStyleSourceUrl(skill)
   return (
     <div className="studio-description">
-      <p>{t('保留用户照片作为主体，并从照片的空间、色调和构图关系中重建一个克制的抽象记忆面板，形成竖版社论式双联画。适合风景、建筑、人物和空间关系清楚的摄影素材；它不是滤镜，也不会把原图完全重绘。')}</p>
+      <p>{t(summary || '按对应风格规则生成。')}</p>
       <div className="studio-attributes" aria-label={t('Skill 属性')}>
-        <span className="skill-tag">{t('图片转绘')}</span>
-        <span className="skill-tag">{t('竖版 · 建议 3:5')}</span>
+        <span className="skill-tag">{t(skill.modeLabel)}</span>
+        {skill.inputSchema?.some((field) => field.type === 'image' && field.required) && <span className="skill-tag">{t('需要原图')}</span>}
       </div>
+      {(full || source) && <details className="style-details"><summary>{t('完整说明与来源')}</summary>
+        {full && <p>{t(full)}</p>}
+        {source && <a href={source} target="_blank" rel="noreferrer">{t('查看来源 ↗')}</a>}
+      </details>}
     </div>
   )
 }
@@ -121,6 +127,7 @@ function App() {
   const [coverEditSkill, setCoverEditSkill] = useState(null)
   const [promptEditor, setPromptEditor] = useState(null)
   const [coverEditError, setCoverEditError] = useState('')
+  const [catalogErrors, setCatalogErrors] = useState({})
   const [viewingResult, setViewingResult] = useState(null)
   const [studioPrefill, setStudioPrefill] = useState(null)
   const [confirmState, setConfirmState] = useState(null)
@@ -133,12 +140,12 @@ function App() {
   useEffect(() => {
     let cancelled = false
     loadSkillCatalog().then((catalog) => {
-      if (!cancelled && catalog.length) {
+      if (!cancelled) {
         // API catalog is authoritative. Merging into the static fallback would
         // resurrect Skills that were already removed from this workspace.
         setSkills(catalog)
       }
-    }).catch(() => {}).finally(() => {
+    }).catch(() => { if (!cancelled) setCatalogErrors((current) => ({ ...current, skill: true })) }).finally(() => {
       if (!cancelled) setSkillsReady(true)
     })
     return () => { cancelled = true }
@@ -148,7 +155,7 @@ function App() {
     let cancelled = false
     loadPromptCatalog().then((catalog) => {
       if (!cancelled) setPrompts(catalog)
-    }).catch(() => {}).finally(() => {
+    }).catch(() => { if (!cancelled) setCatalogErrors((current) => ({ ...current, prompt: true })) }).finally(() => {
       if (!cancelled) setPromptsReady(true)
     })
     return () => { cancelled = true }
@@ -211,11 +218,13 @@ function App() {
   async function refreshSkills() {
     const catalog = await loadSkillCatalog()
     setSkills(catalog)
+    setCatalogErrors((current) => ({ ...current, skill: false }))
   }
 
   async function refreshPrompts() {
     const catalog = await loadPromptCatalog()
     setPrompts(catalog)
+    setCatalogErrors((current) => ({ ...current, prompt: false }))
   }
 
   function openPromptEditor(prompt = null) {
@@ -687,20 +696,23 @@ function App() {
     }
   }
 
-  async function saveSkillCover(skill, image, position) {
+  async function saveStyleCover(skill, image, position, fit) {
     setCoverEditError('')
     try {
-      const response = await updateSkill(skill.id, {
+      const update = skill.kind === 'prompt' ? updatePrompt : updateSkill
+      const response = await update(skill.id, {
         cover: image,
+        coverFit: fit,
         coverPosition: position,
         coverStatus: 'generated',
         coverSource: 'skill-output',
         coverFrameRatio: '4:5',
         ready: true,
       })
-      const updated = response.skills?.find((item) => item.id === skill.id)
+      const updated = response.prompt || response.skills?.find((item) => item.id === skill.id)
       if (!updated) throw new Error('skill_cover_update_failed')
-      setSkills((current) => current.map((item) => item.id === updated.id ? updated : item))
+      const setCatalog = skill.kind === 'prompt' ? setPrompts : setSkills
+      setCatalog((current) => current.map((item) => item.id === updated.id ? updated : item))
       setCoverEditSkill(null)
     } catch {
       setCoverEditError('封面保存失败，请确认本地服务仍在运行。')
@@ -758,6 +770,10 @@ function App() {
       <div className="app-body">
         <Sidebar view={view} setView={navigateAway} resultCount={results.length} skillCount={skills.length} promptCount={prompts.length} onSettings={() => setSettingsOpen(true)} />
         <main className="center">
+          {(catalogErrors.skill || catalogErrors.prompt) && <div className="catalog-error" role="alert">
+            <p>{t('风格目录读取失败，请检查本地服务或索引文件。现有数据不会被默认目录覆盖。')}</p>
+            <button type="button" onClick={() => setSettingsOpen(true)}>{t('诊断')}</button>
+          </div>}
           {activeStyle ? (
             <CreationStudio
               skill={activeStyle}
@@ -810,7 +826,7 @@ function App() {
       {workshopOpen && <SkillWorkshop skills={skills} onClose={() => setWorkshopOpen(false)} onRefresh={refreshSkills} />}
       {promptEditor && <PromptEditor prompt={promptEditor} onClose={() => setPromptEditor(null)} onSave={savePromptForm} />}
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
-      {coverEditSkill && <SkillCoverEditor skill={coverEditSkill} results={results} error={coverEditError} onClose={() => setCoverEditSkill(null)} onSave={saveSkillCover} />}
+      {coverEditSkill && <StyleCoverEditor skill={coverEditSkill} results={results} error={coverEditError} onClose={() => setCoverEditSkill(null)} onSave={saveStyleCover} />}
       {viewingResult && <ResultViewer result={viewingResult} onClose={() => setViewingResult(null)} />}
       {confirmState && <ConfirmDialog {...confirmState} onCancel={() => setConfirmState(null)} />}
     </div>
@@ -910,7 +926,7 @@ function ShelfView({ skills, prompts, results, onOpen, onAddPrompt, onEditPrompt
       {shelfType === 'skill' ? <div className="collection-grid">
         {skills.map((skill) => <SkillCard key={skill.id} skill={skill} isDragging={draggingId === skill.id} isDragOver={dragOverId === skill.id && draggingId !== skill.id} onDragStart={() => setDraggingId(skill.id)} onDragOver={() => setDragOverId(skill.id)} onDrop={() => { onReorder(draggingId, skill.id); clearDrag() }} onDragEnd={clearDrag} onOpen={onOpen} onEditCover={onEditCover} onRemoveSkill={onRemoveSkill} />)}
       </div> : <div className="collection-grid">
-        {prompts.map((prompt, index) => <PromptCard key={prompt.id} prompt={{ ...prompt, index: `P.${String(index + 1).padStart(2, '0')}` }} onOpen={onOpen} onEdit={onEditPrompt} onRemove={onRemovePrompt} />)}
+        {prompts.map((prompt, index) => <PromptCard key={prompt.id} prompt={{ ...prompt, index: `P.${String(index + 1).padStart(2, '0')}` }} onOpen={onOpen} onEdit={onEditPrompt} onEditCover={onEditCover} onRemove={onRemovePrompt} />)}
         <button type="button" className="prompt-add-card" onClick={onAddPrompt}><strong>+</strong><span>{t('添加 Prompt')}</span></button>
       </div>}
       {(shelfType === 'skill' ? skills : prompts).length === 0 && <div className="empty-hint">{t('还没有可用的')} {shelfType === 'skill' ? 'Skill' : 'Prompt'}{t('。')}</div>}
@@ -945,11 +961,11 @@ function SkillCard({ skill, isDragging, isDragOver, onDragStart, onDragOver, onD
         <span className="open-hint">{skill.installed === false ? t('需先安装 ↗') : t('打开工作区 ↗')}</span>
       </button>
       <div className="card-body">
-        <div className="card-names"><h2 title={skill.name} aria-label={skill.name}>{skill.name}</h2><span className="card-usage">{skill.works} {t('次使用')}</span></div>
-        <span className="card-en">{skill.english}</span>
-        <p className="card-desc">{t(skill.summaryZh || skill.styleSummaryZh || '按此 Skill 的原始视觉规则生成。')}</p>
-        <button className="card-cover-edit" type="button" onClick={() => onEditCover(skill)}>{t('更换封面')}</button>
-        <button className="card-skill-remove" type="button" onClick={() => onRemoveSkill(skill)}>{t('移出工作台')}</button>
+        <div className="card-names"><h2 title={skill.name} aria-label={skill.name}>{skill.name}</h2></div>
+        <div className="card-meta"><span className="card-en">SKILL</span><span className="card-usage">{skill.works} {t('次使用')}</span></div>
+        <p className="card-desc">{t(getStyleSummary(skill, 48) || '按此 Skill 的原始视觉规则生成。')}</p>
+        <div className="card-actions"><button className="card-cover-edit" type="button" onClick={() => onEditCover(skill)}>{t('更换封面')}</button>
+        <button className="card-skill-remove" type="button" onClick={() => onRemoveSkill(skill)}>{t('移出工作台')}</button></div>
       </div>
       <div className="card-foot">
         <div className="skill-tag-row" aria-label={t('Skill 标签')}>
@@ -962,7 +978,7 @@ function SkillCard({ skill, isDragging, isDragOver, onDragStart, onDragOver, onD
   )
 }
 
-function PromptCard({ prompt, onOpen, onEdit, onRemove }) {
+function PromptCard({ prompt, onOpen, onEdit, onEditCover, onRemove }) {
   const { t } = useI18n()
   return (
     <article className="skill-card prompt-card">
@@ -971,11 +987,12 @@ function PromptCard({ prompt, onOpen, onEdit, onRemove }) {
         <span className="open-hint">{t('打开工作区 ↗')}</span>
       </button>
       <div className="card-body">
-        <div className="card-names"><h2 title={prompt.name}>{prompt.name}</h2><span className="prompt-mark">PROMPT</span></div>
-        <span className="card-en">{t(prompt.modeLabel)}</span>
-        <p className="card-desc">{prompt.summary ? t(prompt.summary) : t('按这个 Prompt 的固定风格规则生成。')}</p>
-        <button className="card-cover-edit" type="button" onClick={() => onEdit(prompt)}>{t('编辑 Prompt')}</button>
-        <button className="card-skill-remove" type="button" onClick={() => onRemove(prompt)}>{t('删除 Prompt')}</button>
+        <div className="card-names"><h2 title={prompt.name}>{prompt.name}</h2></div>
+        <div className="card-meta"><span className="prompt-mark">PROMPT</span><span className="card-en">{t('固定模板')}</span></div>
+        <p className="card-desc">{t(getStyleSummary(prompt, 48) || '按这个 Prompt 的固定风格规则生成。')}</p>
+        <div className="card-actions"><button className="card-cover-edit" type="button" onClick={() => onEditCover(prompt)}>{t('更换封面')}</button>
+        <button className="card-prompt-edit" type="button" onClick={() => onEdit(prompt)}>{t('编辑 Prompt')}</button>
+        <button className="card-skill-remove" type="button" onClick={() => onRemove(prompt)}>{t('删除 Prompt')}</button></div>
       </div>
       <div className="card-foot"><div className="skill-tag-row"><span className="skill-tag">{t(prompt.modeLabel)}</span><span className="skill-tag">{prompt.index}</span></div><span className="prompt-fixed-label">{t('固定模板')}</span></div>
     </article>
@@ -1012,11 +1029,11 @@ function PromptEditor({ prompt, onClose, onSave }) {
   )
 }
 
-function SkillCoverEditor({ skill, results, error, onClose, onSave }) {
+function StyleCoverEditor({ skill, results, error, onClose, onSave }) {
   const { t } = useI18n()
   const options = useMemo(() => {
     const outputResults = results
-      .filter((result) => result.skillId === skill.id && result.image)
+      .filter((result) => matchesSource(result, skill) && result.image)
       .map((result, index) => ({
         ...result,
         coverLabel: `第 ${index + 1} 张 · ${formatLocalResultDate(result.createdAt || result.date, '生成作品')}`,
@@ -1027,14 +1044,16 @@ function SkillCoverEditor({ skill, results, error, onClose, onSave }) {
     return outputResults
   }, [results, skill])
   const [selected, setSelected] = useState(options[0] || null)
+  const [fit, setFit] = useState(skill.coverFit === 'cover' ? 'cover' : 'contain')
   const [position, setPosition] = useState(options[0]?.coverPosition || { x: 50, y: 50 })
   const dragging = useRef(false)
 
   useEffect(() => {
     const next = options[0] || null
     setSelected(next)
+    setFit(skill.coverFit === 'cover' ? 'cover' : 'contain')
     setPosition(next?.coverPosition || { x: 50, y: 50 })
-  }, [skill.id, options])
+  }, [skill.id, skill.coverFit, options])
 
   function updatePosition(clientX, clientY, element) {
     const rect = element.getBoundingClientRect()
@@ -1045,6 +1064,7 @@ function SkillCoverEditor({ skill, results, error, onClose, onSave }) {
   }
 
   function handlePointerDown(event) {
+    if (fit !== 'cover') return
     dragging.current = true
     event.currentTarget.setPointerCapture(event.pointerId)
     updatePosition(event.clientX, event.clientY, event.currentTarget)
@@ -1063,27 +1083,35 @@ function SkillCoverEditor({ skill, results, error, onClose, onSave }) {
     <div className="cover-editor-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <section className="cover-editor" role="dialog" aria-modal="true" aria-labelledby="cover-editor-title">
         <div className="cover-editor-head">
-          <div><p className="kicker">SKILL COVER</p><h2 id="cover-editor-title">{t('更换「')}{skill.name}{t('」封面')}</h2><p>{t('只能选择这个 Skill 的生成结果，封面框固定为 4:5。')}</p></div>
+          <div><p className="kicker">{skill.kind === 'prompt' ? 'PROMPT COVER' : 'SKILL COVER'}</p><h2 id="cover-editor-title">{t('更换「')}{skill.name}{t('」封面')}</h2><p>{t('只能选择对应风格的生成结果，4:5 卡片默认完整展示图片。')}</p></div>
           <button className="workshop-close" type="button" onClick={onClose} aria-label={t('关闭')}>×</button>
         </div>
         {options.length ? (
           <div className="cover-editor-grid">
             <div className="cover-editor-preview-wrap">
               <div
-                className="cover-editor-preview"
+                className={`cover-editor-preview${fit === 'cover' ? ' is-cropping' : ''}`}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
-                role="application"
-                aria-label={t('拖动图片调整封面取景')}
               >
-                <img src={selected?.image} alt="封面预览" style={{ objectPosition: `${position.x}% ${position.y}%` }} />
+                <img src={selected?.image} alt={t('封面预览')} style={{ objectFit: fit, objectPosition: fit === 'cover' ? `${position.x}% ${position.y}%` : '50% 50%' }} />
                 <span>{t('封面')} · 4:5</span>
               </div>
-              <small>{t('拖动图片调整取景位置')}</small>
+              <small>{t(fit === 'cover' ? '拖动图片调整取景位置' : '等比缩放并居中，留白保留完整构图。')}</small>
             </div>
             <div className="cover-editor-options">
+              <label>{t('展示方式')} <select value={fit} onChange={(event) => { setFit(event.target.value); dragging.current = false }}>
+                <option value="contain">{t('完整展示（默认）')}</option>
+                <option value="cover">{t('铺满裁切')}</option>
+              </select></label>
+              {fit === 'cover' && <label>{t('取景位置')} <select value={`${position.x},${position.y}`} onChange={(event) => { const [x, y] = event.target.value.split(',').map(Number); setPosition({ x, y }) }}>
+                <option value={`${position.x},${position.y}`}>{t('当前位置')}</option>
+                <option value="50,50">{t('居中')}</option>
+                <option value="0,0">{t('左上')}</option>
+                <option value="100,100">{t('右下')}</option>
+              </select></label>}
               <strong>{t('选择一张已生成作品')}</strong>
               <div className="cover-source-grid">
                 {options.map((option) => (
@@ -1096,12 +1124,12 @@ function SkillCoverEditor({ skill, results, error, onClose, onSave }) {
               {error && <p className="cover-editor-error" role="alert">{error}</p>}
               <div className="cover-editor-actions">
                 <button type="button" className="cover-editor-cancel" onClick={onClose}>{t('取消')}</button>
-                <button type="button" className="cover-save" disabled={!selected} onClick={() => onSave(skill, selected.image, position)}>{t('保存封面')}</button>
+                <button type="button" className="cover-save" disabled={!selected} onClick={() => onSave(skill, selected.image, position, fit)}>{t('保存封面')}</button>
               </div>
             </div>
           </div>
         ) : (
-          <div className="cover-editor-empty"><strong>{t('还没有可用的生成结果')}</strong><p>{t('先运行这个 Skill 并保存一次结果，之后就可以在这里更换封面。')}</p><button type="button" className="cover-save" onClick={onClose}>{t('返回风格仓库')}</button></div>
+          <div className="cover-editor-empty"><strong>{t('还没有可用的生成结果')}</strong><p>{t('先运行这个风格并保存一次结果，之后就可以在这里更换封面。')}</p><button type="button" className="cover-save" onClick={onClose}>{t('返回风格仓库')}</button></div>
         )}
       </section>
     </div>
