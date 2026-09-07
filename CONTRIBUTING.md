@@ -19,12 +19,12 @@ npm run build
 发布桌面包前至少运行：
 
 ```bash
-npm run check:bundled-licenses
+npm test
 npm run build
 npm run pack:dir
 ```
 
-任何新的内置 Skill 都必须在 `THIRD_PARTY_NOTICES.md` 记录原作者、原始链接、许可证和封面来源。没有明确再分发许可时，只能作为不含 Skill 文件的外部目录卡片。
+发行版保持空白工作台，不提交内置 Skill、Prompt、样例图片或用户数据。测试使用最小自造数据。
 
 ## English
 
@@ -45,11 +45,11 @@ Preserve the local-first boundary: keep the API loopback-only by default; removi
 Before a desktop release, run at least:
 
 ```bash
-npm run check:bundled-licenses
+npm test
 npm run build
 npm run pack:dir
 ```
 
-Every new bundled Skill must be listed in `THIRD_PARTY_NOTICES.md` with its author, original source, license, and cover provenance. If redistribution rights are unclear, ship only an external catalog card without the Skill files.
+Keep distributions empty: no bundled Skills, Prompts, sample images, or user data. Use minimal synthetic test data.
 
 `npm run dist:mac`, `npm run dist:win`, and `npm run dist:linux` create local Electron artifacts. Signing and notarization credentials belong to the release environment, never the repository.

@@ -8,9 +8,10 @@ test('cover display mode is optional, persists, and rejects invalid values', asy
   const root = await mkdtemp(join(tmpdir(), 'styleshelf-cover-'))
   process.env.STYLE_SHELF_DATA_DIR = root
   t.after(() => rm(root, { recursive: true, force: true }))
-  const { listSkills, updateSkill } = await import('../server/skills.mjs')
-  const [skill] = await listSkills()
-  assert.ok(skill)
+  const { listSkills, updateSkill, createSkill } = await import('../server/skills.mjs')
+  assert.deepEqual(await listSkills(), [])
+  const skill = { id: 'test-skill', name: 'Test', english: 'TEST', desc: '', mode: 'text', modeLabel: 'Text', scenes: [], version: 'local', inputSchema: [] }
+  await createSkill(skill)
   for (const coverFit of ['cover', 'contain']) {
     await updateSkill(skill.id, { coverFit })
     assert.equal((await listSkills()).find((item) => item.id === skill.id).coverFit, coverFit)

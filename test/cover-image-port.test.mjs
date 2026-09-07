@@ -11,11 +11,13 @@ test('Skill and Prompt covers survive restarts and save without a port', async (
   t.after(() => rm(root, { recursive: true, force: true }))
   const skills = await import('../server/skills.mjs')
   const prompts = await import('../server/prompts.mjs')
-  const [skill] = await skills.listSkills()
+  assert.deepEqual(await skills.listSkills(), [])
+  const skill = { id: 'test-skill', name: 'Test', english: 'TEST', desc: '', mode: 'text', modeLabel: 'Text', scenes: [], version: 'local', inputSchema: [] }
+  await skills.createSkill(skill)
   const prompt = await prompts.createPrompt({ name: 'Cover test', template: 'Draw a lake', mode: 'text' })
   const path = '/api/jobs/sample/output/result-01.png'
   const cover = `http://127.0.0.1:63963${path}`
-  await skills.updateSkill(skill.id, { cover, samples: [cover] })
+  await skills.updateSkill(skill.id, { cover, samples: [cover], coverStatus: 'generated' })
   await prompts.updatePrompt(prompt.id, { cover })
   for (const file of ['skills.json', 'prompts.json']) {
     const saved = JSON.parse(await readFile(join(root, file), 'utf8'))

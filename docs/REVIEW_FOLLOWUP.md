@@ -1,5 +1,7 @@
 # 审查修复记录
 
+> 历史记录：本文描述 0.2.2 以前的设计或验证。0.2.2 已移除所有内置 Skill、Prompt、样例和自动安装入口；当前使用方式以 README 为准。旧 Git 历史与 Release 本次未删除。
+
 来源：[PROJECT_REVIEW_REPORT.md](./PROJECT_REVIEW_REPORT.md)
 
 ## 本轮已修复

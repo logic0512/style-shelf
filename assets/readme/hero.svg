@@ -6,7 +6,7 @@
   <rect x="48" y="42" width="44" height="44" rx="4" fill="#151b24"/>
   <text x="70" y="73" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22" font-weight="700" fill="#ffffff">S</text>
   <text x="108" y="61" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700" letter-spacing="3" fill="#151b24">STYLE SHELF</text>
-  <text x="108" y="83" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" letter-spacing="1.5" fill="#6c7788">LOCAL IMAGE WORKBENCH · v0.2.0</text>
+  <text x="108" y="83" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" letter-spacing="1.5" fill="#6c7788">LOCAL IMAGE WORKBENCH</text>
 
   <text x="48" y="154" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="68" font-weight="760" letter-spacing="-2" fill="#151b24">Style Shelf</text>
   <text x="48" y="199" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif" font-size="28" font-weight="560" fill="#283241">把生图 Skill 和 Prompt 变成可浏览、可运行、可保存的本地工作台</text>

@@ -7,7 +7,6 @@ import { resultImage } from './store.mjs'
 import { resolveSkillMetadata } from './skill-metadata.mjs'
 
 const skillsFile = join(getDataDir(), 'skills.json')
-const seedFile = join(process.env.STYLE_SHELF_WEB_ROOT || join(process.cwd(), 'public'), 'skill-catalog.json')
 const codexSkillsRoot = join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'skills')
 const ID = /^[a-z0-9][a-z0-9._-]{1,119}$/
 const FIELD_TYPES = new Set(['image', 'textarea', 'ratio', 'select', 'questions'])
@@ -70,15 +69,6 @@ function validSkill(skill) {
   )
 }
 
-async function readSeed() {
-  try {
-    const seed = JSON.parse(await readFile(seedFile, 'utf8'))
-    return Array.isArray(seed) ? Promise.all(seed.filter(validSkill).map(withInstallStatus)) : []
-  } catch {
-    return []
-  }
-}
-
 async function withInstallStatus(skill) {
   skill = { ...skill, cover: resultImage(skill.cover), ...(Array.isArray(skill.samples) ? { samples: skill.samples.map((image) => resultImage(image)) } : {}) }
   if (skill.distribution !== 'external') return { ...skill, installed: true }
@@ -91,29 +81,10 @@ async function readSkillsUnsafe() {
   try {
     const stored = JSON.parse(await readFile(skillsFile, 'utf8'))
     if (Array.isArray(stored) && stored.every(validSkill)) {
-      // 旧目录补入仓库随附的真实样例与权威元数据；不覆盖使用次数、封面和删除状态。
-      const seedById = new Map((await readSeed()).map((skill) => [skill.id, skill]))
       return Promise.all(stored.map(async (skill) => {
-        const seed = seedById.get(skill.id)
-        const cover = skill.cover || seed?.cover || null
-        const metadata = seed ? {
-          name: seed.name,
-          english: seed.english,
-          desc: seed.desc,
-          sourceName: seed.sourceName,
-          sourceDescription: seed.sourceDescription,
-          summaryZh: seed.summaryZh,
-          descriptionZh: seed.descriptionZh,
-          styleSummaryZh: seed.styleSummaryZh,
-          subjectSummaryZh: seed.subjectSummaryZh,
-          metadataSource: seed.metadataSource,
-          needsMetadataReview: seed.needsMetadataReview,
-          author: seed.author,
-          sourceUrl: seed.sourceUrl,
-          license: seed.license,
-          distribution: seed.distribution,
-        } : {}
-        if (!seed) {
+        const cover = skill.cover || null
+        const metadata = {}
+        {
           const skillPath = join(codexSkillsRoot, skill.id, 'SKILL.md')
           try {
             await new Promise((resolve, reject) => access(skillPath, constants.R_OK, (error) => error ? reject(error) : resolve()))
@@ -137,17 +108,16 @@ async function readSkillsUnsafe() {
         return withInstallStatus({
           ...skill,
           ...metadata,
-          ...(cover && !skill.cover ? { cover, samples: seed.samples } : {}),
           coverStatus: skill.coverStatus || (cover ? 'generated' : 'needs_sample'),
-          coverSource: skill.coverSource || (cover ? (seed?.coverSource || 'skill-output') : 'none'),
-          coverFrameRatio: skill.coverFrameRatio || seed?.coverFrameRatio || '4:5',
+          coverSource: skill.coverSource || (cover ? 'skill-output' : 'none'),
+          coverFrameRatio: skill.coverFrameRatio || '4:5',
           ready: Boolean(cover),
         })
       }))
     }
     throw new Error('invalid_skills_store')
   } catch (error) {
-    if (error.code === 'ENOENT') return readSeed()
+    if (error.code === 'ENOENT') return []
     throw new Error('invalid_skills_store', { cause: error })
   }
 }

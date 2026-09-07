@@ -1,4 +1,4 @@
-import { access, readdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { access, readdir, unlink, writeFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -22,10 +22,6 @@ function warn(name, detail) {
 const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number)
 if ((nodeMajor === 20 && nodeMinor >= 19) || (nodeMajor === 22 && nodeMinor >= 12) || nodeMajor > 22) pass('Node.js', process.versions.node)
 else throw new Error(`Node.js 20.19+ or 22.12+ required, found ${process.versions.node}`)
-
-const catalog = JSON.parse(await readFile(join(process.cwd(), 'public/skill-catalog.json'), 'utf8'))
-if (!Array.isArray(catalog)) throw new Error('public/skill-catalog.json must contain an array')
-pass('Skill catalog', `${catalog.length} entries`)
 
 await ensureStorageLayout()
 const probe = join(dataDir, `.doctor-${process.pid}.tmp`)

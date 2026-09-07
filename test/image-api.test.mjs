@@ -69,7 +69,7 @@ test('real API publishes relative image paths and serves them after a port chang
       env: { ...process.env, STYLE_SHELF_DATA_DIR: join(root, 'data'), STYLE_SHELF_LIBRARY_DIR: join(root, 'library'),
         STYLE_SHELF_WEB_ROOT: webRoot,
         CODEX_HOME: join(root, 'codex'), CODEX_SKILLS_ROOT: join(root, 'codex', 'skills'),
-        STYLE_SHELF_BUNDLED_SKILLS_DIR: join(root, 'empty-bundle'), STYLE_SHELF_PORT: String(port) },
+        STYLE_SHELF_PORT: String(port) },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     children.add(child)
@@ -95,6 +95,11 @@ test('real API publishes relative image paths and serves them after a port chang
   })
   assert.equal(published.status, 201, await published.text())
   async function verify(base) {
+    for (const catalog of ['skills', 'prompts']) {
+      const response = await fetch(`${base}/api/${catalog}`, { signal: AbortSignal.timeout(3000) })
+      assert.equal(response.status, 200)
+      assert.deepEqual((await response.json())[catalog], [])
+    }
     const response = await fetch(`${base}/api/results`, { signal: AbortSignal.timeout(3000) })
     assert.equal(response.status, 200)
     const { results } = await response.json()

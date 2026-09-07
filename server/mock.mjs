@@ -7,7 +7,6 @@ import { cancelJobRun, configureExecutor, describeExecutor, initializeExecutorSe
 import { createSkill, deleteSkill, listDeletedSkills, listSkills, recordSkillPublication, restoreSkill, updateSkill } from './skills.mjs'
 import { createPrompt, deletePrompt, getPrompt, listPrompts, updatePrompt } from './prompts.mjs'
 import { installSkill, listLocalSkills } from './skill-installer.mjs'
-import { seedBundledSkills } from './bundled-skills.mjs'
 import { ensureStorageLayout, getDataDir, getGeneratedDir, getJobPaths, getStorageStats, getUploadsDir, isPathInside, migrateLegacyStorage } from './storage.mjs'
 
 const port = Number(process.env.STYLE_SHELF_PORT || 4317)
@@ -486,16 +485,6 @@ await ensureStorageLayout()
 await initializeExecutorSelection()
 const migration = await migrateLegacyStorage()
 if (migration.migratedInputs || migration.migratedArtifacts) console.log(`Style Shelf migrated ${migration.migratedInputs} uploads and ${migration.migratedArtifacts} generated images`)
-let bundled = { installed: [], warnings: ['bundled_skill_seed_failed'] }
-try {
-  bundled = await seedBundledSkills()
-} catch (error) {
-  // Prompt storage and the local UI must remain available when the optional
-  // Codex Skill directory is missing or not writable.
-  console.warn(`Style Shelf bundled Skill seed skipped: ${error.message}`)
-}
-if (bundled.installed.length) console.log(`Style Shelf installed ${bundled.installed.length} bundled Skills`)
-for (const warning of bundled.warnings) console.warn(`Style Shelf Skill bundle warning: ${warning}`)
 await markInterruptedJobs()
 const queuedJobs = (await listJobs()).filter((job) => job.state === 'queued')
 await Promise.allSettled(queuedJobs.map((job) => startJobRun(job.id)))

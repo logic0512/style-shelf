@@ -1,5 +1,7 @@
 # Skill 封面来源 / Skill cover provenance
 
+> 历史记录：本文描述 0.2.2 以前的设计或验证。0.2.2 已移除所有内置 Skill、Prompt、样例和自动安装入口；当前使用方式以 README 为准。旧 Git 历史与 Release 本次未删除。
+
 ## 中文
 
 Skill、Prompt 封面及 Skill 样例引用本地 Job 输出时，持久化为不含端口的 `/api/jobs/.../output/...` 路径；读取时映射到当前服务端口，兼容旧的 localhost 完整地址。回归检查：`node --test test/cover-image-port.test.mjs`。

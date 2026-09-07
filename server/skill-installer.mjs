@@ -57,60 +57,6 @@ function parseSource(source) {
   return { url: value, path }
 }
 
-const CURATED_INPUT_CONTRACTS = {
-  'photo-abstract-editorial': {
-    mode: 'image',
-    fields: [{ id: 'source_images', type: 'image', label: '原图', required: true, hint: '图片会复制到当前任务目录，不会移动原文件' }],
-    capabilities: ['imageToImage'],
-  },
-  'gc-minimal-zine-poster-v0-1': {
-    mode: 'text',
-    fields: [
-      { id: 'direction', type: 'textarea', label: '想法 / 文案', required: true, placeholder: '写下想压成海报的那句话或那个观点' },
-      { id: 'ratio', type: 'ratio', label: '画幅', options: ['3:4', '1:1', '16:9'] },
-    ],
-    capabilities: ['textToImage'],
-  },
-  'scene-distillation-zine-v1-3': {
-    mode: 'mixed',
-    fields: [
-      { id: 'source_images', type: 'image', label: '主体图', required: true, hint: '先提供一张照片，再补充希望保留的动作或情绪' },
-      { id: 'direction', type: 'textarea', label: '补充描述', placeholder: '描述想保留的动作、情绪或氛围' },
-    ],
-    capabilities: ['imageToImage', 'textToImage'],
-  },
-  'scenes-gathered-zine-v1-3': {
-    mode: 'mixed',
-    fields: [
-      { id: 'source_images', type: 'image', label: '原图', required: true, hint: '先提供照片，文字可以补充你想强调的方向' },
-      { id: 'direction', type: 'textarea', label: '你的想法（可选）', placeholder: '写下想保留、强调或加入的主体、空间、情绪或文案' },
-    ],
-    interaction: 'guided_optional',
-    capabilities: ['imageToImage', 'textToImage'],
-  },
-  'daily-photo-playground': {
-    mode: 'mixed',
-    fields: [
-      { id: 'source_images', type: 'image', label: '原图', required: true, hint: '照片是这个 Skill 的核心工作材料' },
-      { id: 'direction', type: 'textarea', label: '补充方向（可选）', placeholder: '补充想保留的情绪、动作或视觉重点' },
-    ],
-    capabilities: ['imageToImage', 'textToImage'],
-  },
-  'vinyl-image-generator': {
-    mode: 'mixed',
-    fields: [
-      { id: 'source_images', type: 'image', label: '参考图（可选）', multiple: true, hint: '可以提供一张或多张图片作为视觉证据' },
-      { id: 'direction', type: 'textarea', label: '想法 / 记忆 / 故事', placeholder: '写下记忆、句子、情绪、故事、物体或地点' },
-    ],
-    requiredAny: ['source_images', 'direction'],
-    capabilities: ['imageToImage', 'textToImage', 'multiImage'],
-  },
-  'ian-xiaohei-illustrations': {
-    mode: 'text',
-    fields: [{ id: 'direction', type: 'textarea', label: '文章 / 观点 / 文案', required: true, placeholder: '粘贴文章、观点或希望表达的结构' }],
-    capabilities: ['textToImage'],
-  },
-}
 
 function normalizeInputContract(contract, source) {
   if (!contract || !Array.isArray(contract.fields) || contract.fields.length === 0) return null
@@ -144,8 +90,6 @@ function readExplicitInputContract(content) {
 function inferInputContract(skillId, content) {
   const explicit = readExplicitInputContract(content)
   if (explicit) return explicit
-  const curated = normalizeInputContract(CURATED_INPUT_CONTRACTS[skillId], 'curated')
-  if (curated) return curated
 
   const lower = content.toLowerCase()
   const hasImageInput = /user[- ]provided\s+(?:photo|image)|supplied\s+(?:photo|image)|source\s+(?:photo|image)|uploaded\s+(?:photo|image)|reference\s+(?:photo|image)|input\s+(?:photo|image)|用户(?:提供|上传)的?(?:图片|照片)|原图|参考图/.test(lower)

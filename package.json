@@ -1,7 +1,7 @@
 {
   "name": "style-shelf",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "license": "MIT",
   "description": "Local-first image style Skill workbench",
   "author": "Style Shelf contributors",
@@ -15,7 +15,6 @@
     "start:mock": "node server/mock.mjs",
     "setup": "node scripts/setup.mjs",
     "bootstrap": "node scripts/bootstrap.mjs",
-    "check:bundled-licenses": "node scripts/check-bundled-licenses.mjs",
     "doctor": "node scripts/doctor.mjs",
     "start": "node scripts/start.mjs",
     "desktop": "npm run build && electron electron/main.mjs",
@@ -45,7 +44,6 @@
       "server/**/*",
       "electron/**/*",
       "scripts/load-env.mjs",
-      "bundled-skills/**/*",
       "LICENSE",
       "THIRD_PARTY_NOTICES.md",
       "package.json"
@@ -54,7 +52,6 @@
       "dist/**/*",
       "server/**/*",
       "electron/**/*",
-      "bundled-skills/**/*",
       "scripts/load-env.mjs"
     ],
     "mac": {

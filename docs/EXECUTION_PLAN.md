@@ -1,5 +1,7 @@
 # 个人风格仓库开发计划
 
+> 历史记录：本文描述 0.2.2 以前的设计或验证。0.2.2 已移除所有内置 Skill、Prompt、样例和自动安装入口；当前使用方式以 README 为准。旧 Git 历史与 Release 本次未删除。
+
 > 暂定工作名：Style Shelf / 风格仓库  
 > 产品形态：跨平台、本地优先、可开源的 Web 工作台，Electron 作为独立桌面启动外壳
 > 目标系统：macOS / Windows / Linux  
