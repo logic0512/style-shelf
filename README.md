@@ -45,6 +45,10 @@
 - **本地保存作品**：原图与 `4:3` / `3:4` 展示封面分开保存，用户数据不会打进安装包。
 - **安全管理 Skill**：可从 Codex Skill 目录导入或从 GitHub 安装；移出工作台不会删除原始 Skill。
 
+### 寻找图片生成 Skill
+
+Style Shelf 默认不内置 Skill。你可以前往 [Awesome Codex ImageGen Skills](https://github.com/tuteng0915/Awesome-Codex-ImageGen-Skills) 浏览带真实生成示例的社区 Skill，并从各 Skill 的原作者仓库安装。该目录是独立的第三方项目；安装前请检查每个 Skill 的来源、许可证与使用限制。
+
 ## 工作流程
 
 1. **选择来源** — 从 Skill 风格或 Prompt 风格中选择一张卡片。

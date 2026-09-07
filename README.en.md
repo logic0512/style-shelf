@@ -45,6 +45,10 @@ Browse and filter your work. Gallery crops are saved separately from the origina
 - **Save work locally** — keep originals separate from `4:3` or `3:4` display crops; user data is never bundled into the installer.
 - **Manage Skills safely** — import from the Codex Skill directory or install from GitHub; removing a Skill from the workbench never deletes its source.
 
+### Find image-generation Skills
+
+Style Shelf does not bundle Skills by default. Visit [Awesome Codex ImageGen Skills](https://github.com/tuteng0915/Awesome-Codex-ImageGen-Skills) to browse community Skills with real generated examples, then install them from their original repositories. This directory is an independent third-party project; review each Skill's source, license, and usage restrictions before installing it.
+
 ## Workflow
 
 1. **Choose a source** — select a card from the Skill or Prompt collection.
