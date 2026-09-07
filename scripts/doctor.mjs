@@ -20,8 +20,8 @@ function warn(name, detail) {
 }
 
 const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number)
-if ((nodeMajor === 20 && nodeMinor >= 19) || (nodeMajor === 22 && nodeMinor >= 12) || nodeMajor > 22) pass('Node.js', process.versions.node)
-else throw new Error(`Node.js 20.19+ or 22.12+ required, found ${process.versions.node}`)
+if (nodeMajor > 22 || (nodeMajor === 22 && nodeMinor >= 12)) pass('Node.js', process.versions.node)
+else throw new Error(`Node.js 22.12+ required, found ${process.versions.node}`)
 
 await ensureStorageLayout()
 const probe = join(dataDir, `.doctor-${process.pid}.tmp`)
@@ -60,6 +60,20 @@ try {
   pass('Codex Skill directory', `${codexHome}/skills (${count} directories)`)
 } catch {
   warn('Codex Skill directory', `${codexHome}/skills not found; local Skill import and real runs need Codex installed`)
+}
+
+const installerScript = join(codexHome, 'skills', '.system', 'skill-installer', 'scripts', 'install-skill-from-github.py')
+const listerScript = join(codexHome, 'skills', '.system', 'skill-installer', 'scripts', 'list-skills.py')
+try {
+  await access(installerScript)
+  try {
+    await access(listerScript)
+    pass('Remote Skill installer', 'GitHub URL and name installation available')
+  } catch {
+    warn('Remote Skill installer', 'GitHub URL installation available; curated name lookup unavailable')
+  }
+} catch {
+  warn('Remote Skill installer', 'Codex system installer not found; local Skill import remains available')
 }
 
 console.log(checks.join('\n'))

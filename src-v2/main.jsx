@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { cancelJob, configureExecutor, continueJob, createJob, createPrompt, deletePrompt, deleteResult, deleteSkill, installSkill, jobArtifactUrl, jobInputUrl, loadDeletedSkills, loadHealth, loadJob, loadJobs, loadLocalSkills, loadPersistedResults, loadPromptCatalog, loadSkillCatalog, loadStorage, restoreSkill, runJob, saveResult, seedResults, updateJob, updatePrompt, uploadJobInput, updateSkill } from './api.js'
 import { LocaleProvider, useI18n } from './i18n.js'
 import { getStyleSummary, getStyleSourceUrl } from './style-summary.js'
+import { hasPromptChanges, isInputFieldReady, userFacingError } from './form-state.js'
 import './styles.css'
 
 /* ---------------- 数据 ---------------- */
@@ -524,12 +525,13 @@ function App() {
         return
       }
       runJob(id).then(() => monitorJob(id, skill, { ...payload, ...jobPayload })).catch((error) => {
-        setStorageState('offline')
-        setTasks((current) => current.map((t) => t.id === id ? { ...t, state: 'failed', progress: 0, message: error.message || '无法启动本地执行器' } : t))
+        if (!error.message?.startsWith('job_input_required:')) setStorageState('offline')
+        setTasks((current) => current.map((t) => t.id === id ? { ...t, state: 'failed', progress: 0, message: userFacingError(error.message, '无法启动本地执行器') } : t))
       })
-    }).catch(() => {
+    }).catch((error) => {
       setStorageState('offline')
-      setTasks((current) => current.map((t) => t.id === id ? { ...t, state: 'failed', progress: 0, message: '本地 Job 创建或上传失败' } : t))
+      const message = userFacingError(error.message, '本地 Job 创建或上传失败')
+      setTasks((current) => current.map((t) => t.id === id ? { ...t, state: 'failed', progress: 0, message } : t))
       updateJob(id, 'failed', '本地 Job 创建或上传失败', 0).catch(() => {})
     })
   }
@@ -1012,10 +1014,15 @@ function PromptEditor({ prompt, onClose, onSave }) {
     try { await onSave(values) } catch (saveError) { setError(saveError.message || 'Prompt 保存失败') } finally { setSaving(false) }
   }
 
+  function close() {
+    if (hasPromptChanges(prompt, values) && !window.confirm(t('当前 Prompt 还有未保存的修改，确认关闭吗？'))) return
+    onClose()
+  }
+
   return (
-    <div className="workshop-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <div className="workshop-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close() }}>
       <section className="workshop-panel prompt-editor" role="dialog" aria-modal="true" aria-labelledby="prompt-editor-title">
-        <div className="workshop-head"><div><p className="kicker">PROMPT TEMPLATE</p><h2 id="prompt-editor-title">{prompt.id ? t('编辑 Prompt') : t('添加 Prompt')}</h2><p>{t('保存可用于多个主体的固定风格规则；单张图片专用描述不适合作为模板。')}</p></div><button className="workshop-close" type="button" onClick={onClose} aria-label="关闭">×</button></div>
+        <div className="workshop-head"><div><p className="kicker">PROMPT TEMPLATE</p><h2 id="prompt-editor-title">{prompt.id ? t('编辑 Prompt') : t('添加 Prompt')}</h2><p>{t('保存可用于多个主体的固定风格规则；单张图片专用描述不适合作为模板。')}</p></div><button className="workshop-close" type="button" onClick={close} aria-label="关闭">×</button></div>
         <form className="workshop-form" onSubmit={submit}>
           <label className="field"><span>{t('名称')}</span><input value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} required maxLength={200} /></label>
           <label className="field"><span>{t('说明（可选）')}</span><input value={values.summary} onChange={(event) => setValues((current) => ({ ...current, summary: event.target.value }))} maxLength={500} /></label>
@@ -1198,12 +1205,7 @@ function CreationStudio({ skill, prefill, result, backgroundTaskCount, taskHisto
   const inputSchema = skill.inputSchema || []
   const fieldValue = (id) => values[id] || ''
   const fieldFiles = (id) => filesByField[id] || []
-  const fieldReady = (field) => {
-    if (field.type === 'image') return fieldFiles(field.id).length > 0
-    if (field.type === 'textarea') return String(fieldValue(field.id)).trim().length > 0
-    if (field.type === 'questions') return Object.keys(answers).length > 0
-    return true
-  }
+  const fieldReady = (field) => isInputFieldReady(field.type === 'questions' && !field.questions ? { ...field, questions: skill.mode === 'guided' ? GUIDED_QUESTIONS : [] } : field, { values, filesByField, answers })
   const ready = inputSchema.filter((field) => field.required).every((field) => {
     return fieldReady(field)
   }) && (!skill.requiredAny?.length || skill.requiredAny.some((id) => fieldReady(inputSchema.find((field) => field.id === id) || { id, type: 'textarea' }))) && (!continuing || continuationPrompt.trim().length > 0)
@@ -1687,6 +1689,7 @@ function SettingsPanel({ onClose }) {
             {['codex', 'workbuddy'].map((id) => <button key={id} type="button" className={health?.executor?.id === id || (id === 'codex' && health?.executor?.id === 'codex-runner') ? 'executor-choice-button active' : 'executor-choice-button'} disabled={savingExecutor} onClick={() => selectExecutor(id)}>{id === 'codex' ? 'Codex' : 'WorkBuddy'}</button>)}
           </div><small>{health?.executor ? `${health.executor.label} · ${health.executor.state === 'missing_token' ? t('未配置连接凭据') : t('已配置')}` : t('检查中…')}</small></div></div>
           <div className="settings-row"><span>{t('生图接口')}</span><strong className={health?.executor?.imageProvider?.state === 'external_config_required' ? 'settings-pending' : 'settings-ok'}>{health?.executor?.imageProvider?.label || t('由 Codex 提供')}</strong></div>
+          <div className="settings-row"><span>{t('远程 Skill 安装')}</span><strong className={health?.skillInstaller?.state === 'ready' ? 'settings-ok' : 'settings-pending'}>{health?.skillInstaller?.state !== 'ready' ? t('缺少 Codex 系统安装器') : health.skillInstaller.nameLookup === false ? t('GitHub 地址可用；名称检索不可用') : t('可用')}</strong></div>
           <div className="settings-row"><span>{t('端口覆盖')}</span><code>STYLE_SHELF_PORT / STYLE_SHELF_FRONTEND_PORT</code></div>
         </div>
         {error && <p className="settings-error" role="alert">{error}。请先在仓库目录运行 `npm run start`。</p>}
@@ -1724,7 +1727,7 @@ function SkillWorkshop({ skills, onClose, onRefresh }) {
       await onRefresh()
       setSource('')
     } catch (submitError) {
-      setError(submitError.message || 'Skill 保存失败')
+      setError(userFacingError(submitError.message, 'Skill 保存失败'))
     } finally {
       setInstalling(false)
     }
@@ -1747,7 +1750,7 @@ function SkillWorkshop({ skills, onClose, onRefresh }) {
     } catch (importError) {
       await onRefresh().catch(() => {})
       await loadLocalSkills(localQuery).then(setLocalSkills).catch(() => {})
-      setError(importError.message || '本地 Skill 导入失败')
+      setError(userFacingError(importError.message, '本地 Skill 导入失败'))
     } finally {
       setImportingLocal(false)
     }

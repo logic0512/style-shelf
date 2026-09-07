@@ -19,6 +19,16 @@ function validField(field) {
   if (field.type === 'image' && field.multiple !== undefined && typeof field.multiple !== 'boolean') return false
   if (field.type === 'ratio') return Array.isArray(field.options) && field.options.length > 0 && field.options.every((option) => typeof option === 'string')
   if (field.type === 'select') return Array.isArray(field.options) && field.options.length > 0 && field.options.every((option) => option && typeof option.value === 'string' && typeof option.label === 'string')
+  if (field.type === 'questions') {
+    if (!Array.isArray(field.questions) || field.questions.length === 0) return false
+    const ids = new Set()
+    return field.questions.every((question) => {
+      if (!question || typeof question.id !== 'string' || !question.id || ids.has(question.id) || typeof question.question !== 'string' || !question.question.trim()) return false
+      if (!Array.isArray(question.options) || question.options.length === 0 || !question.options.every((option) => typeof option === 'string' && option.trim())) return false
+      ids.add(question.id)
+      return true
+    })
+  }
   return true
 }
 
@@ -71,7 +81,6 @@ function validSkill(skill) {
 
 async function withInstallStatus(skill) {
   skill = { ...skill, cover: resultImage(skill.cover), ...(Array.isArray(skill.samples) ? { samples: skill.samples.map((image) => resultImage(image)) } : {}) }
-  if (skill.distribution !== 'external') return { ...skill, installed: true }
   const skillPath = join(codexSkillsRoot, skill.id, 'SKILL.md')
   const installed = await new Promise((resolve) => access(skillPath, constants.R_OK, (error) => resolve(!error)))
   return { ...skill, installed }
@@ -147,6 +156,10 @@ function enqueue(operation) {
 export async function listSkills() {
   await writeChain
   return sortSkills((await readSkillsUnsafe()).filter((skill) => !skill.deletedAt))
+}
+
+export async function getSkill(id) {
+  return (await listSkills()).find((skill) => skill.id === id) || null
 }
 
 export async function listDeletedSkills() {

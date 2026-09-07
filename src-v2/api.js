@@ -80,8 +80,9 @@ async function request(path, options = {}) {
     ...options,
     headers: { 'content-type': 'application/json', ...(options.headers || {}) },
   })
-  if (!response.ok) throw new Error(`local_api_${response.status}`)
-  return response.json()
+  const payload = typeof response.json === 'function' ? await response.json().catch(() => null) : null
+  if (!response.ok) throw new Error(payload?.error || `local_api_${response.status}`)
+  return payload
 }
 
 export async function loadPersistedResults() {

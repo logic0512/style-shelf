@@ -4,9 +4,9 @@ import { basename, extname, join, resolve } from 'node:path'
 import { readResults, initializeResults, updateResults } from './store.mjs'
 import { createJob, listJobs, markInterruptedJobs, readJob, updateJob, saveJobInput, queueJobContinuation } from './jobs.mjs'
 import { cancelJobRun, configureExecutor, describeExecutor, initializeExecutorSelection, startJobRun } from './executor.mjs'
-import { createSkill, deleteSkill, listDeletedSkills, listSkills, recordSkillPublication, restoreSkill, updateSkill } from './skills.mjs'
+import { createSkill, deleteSkill, getSkill, listDeletedSkills, listSkills, recordSkillPublication, restoreSkill, updateSkill } from './skills.mjs'
 import { createPrompt, deletePrompt, getPrompt, listPrompts, updatePrompt } from './prompts.mjs'
-import { installSkill, listLocalSkills } from './skill-installer.mjs'
+import { describeSkillInstaller, installSkill, listLocalSkills } from './skill-installer.mjs'
 import { ensureStorageLayout, getDataDir, getGeneratedDir, getJobPaths, getStorageStats, getUploadsDir, isPathInside, migrateLegacyStorage } from './storage.mjs'
 
 const port = Number(process.env.STYLE_SHELF_PORT || 4317)
@@ -186,6 +186,7 @@ const server = createServer(async (request, response) => {
       dataDir: storage.dataDir,
       libraryDir: storage.libraryDir,
       executor: describeExecutor(),
+      skillInstaller: await describeSkillInstaller(),
     })
     return
   }
@@ -282,6 +283,13 @@ const server = createServer(async (request, response) => {
       if (payload.promptId && !await getPrompt(payload.promptId)) {
         sendJson(response, 404, { error: 'prompt_not_found' })
         return
+      }
+      if (payload.skillId) {
+        const skill = await getSkill(payload.skillId)
+        if (!skill || skill.installed === false) {
+          sendJson(response, 404, { error: 'skill_not_found' })
+          return
+        }
       }
       sendJson(response, 201, { job: await createJob(payload) })
       return
@@ -473,10 +481,11 @@ const server = createServer(async (request, response) => {
     sendJson(response, 404, { error: 'not_found' })
   } catch (error) {
     const status = error.message === 'payload_too_large' ? 413
-      : ['skill_already_exists', 'prompt_already_exists'].includes(error.message) ? 409
+      : ['skill_already_exists', 'prompt_already_exists', 'job_already_exists', 'artifact_already_exists'].includes(error.message) ? 409
+        : error.message === 'skill_installer_unavailable' ? 503
         : error.message === 'skill_name_not_found' ? 404
           : error.message === 'prompt_not_found' ? 404
-            : error.message === 'unsafe_storage_path' || error.message.startsWith('skill_') || error.message.startsWith('prompt_') || error.message.startsWith('only_') || error.message.startsWith('invalid_') || error.message.startsWith('github_') ? 400 : 500
+            : error.message === 'unsafe_storage_path' || error.message.startsWith('job_input_required:') || error.message.startsWith('skill_') || error.message.startsWith('prompt_') || error.message.startsWith('only_') || error.message.startsWith('invalid_') || error.message.startsWith('github_') ? 400 : 500
     sendJson(response, status, { error: status === 500 ? 'internal_error' : error.message })
   }
 })

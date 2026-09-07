@@ -1,10 +1,13 @@
 {
   "name": "style-shelf",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "license": "MIT",
   "description": "Local-first image style Skill workbench",
   "author": "Style Shelf contributors",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "type": "module",
   "main": "electron/main.mjs",
   "scripts": {
@@ -25,11 +28,11 @@
     "dist:linux": "npm run build && electron-builder --linux --publish never"
   },
   "devDependencies": {
-    "electron": "^39.0.0",
-    "electron-builder": "^26.0.12",
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "vite": "8.2.0"
+    "vite": "^8.2.2"
   },
   "build": {
     "appId": "com.styleshelf.app",

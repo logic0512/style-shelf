@@ -1,4 +1,5 @@
 import { basename, dirname, extname, isAbsolute, join, relative, sep } from 'node:path'
+import { constants } from 'node:fs'
 import { copyFile, lstat, readFile, readdir, rename, realpath, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { ensureStorageDirectory, getGeneratedDir, getJobPaths, getJobsDir, getTempDir, getUploadsDir } from './storage.mjs'
@@ -66,6 +67,7 @@ export async function createJob({ id, skillId, promptId, payload }) {
   const initialTurnId = 'turn-01'
   const initialPayload = payload && typeof payload === 'object' ? payload : {}
   return enqueueJobWrite(async () => {
+    if (await readJobUnsafe(id)) throw new Error('job_already_exists')
     const paths = getJobPaths(id)
     await ensureStorageDirectory(dirname(paths.outputDir), getTempDir())
     return writeJob({
@@ -151,8 +153,17 @@ export async function listJobs() {
     if (error.code === 'ENOENT') return []
     throw error
   }
-  const jobs = await Promise.all(entries.filter((entry) => entry.isDirectory() && JOB_ID.test(entry.name)).map((entry) => readJobUnsafe(entry.name)))
-  return jobs.filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
+  const jobEntries = entries.filter((entry) => entry.isDirectory() && JOB_ID.test(entry.name))
+  const records = await Promise.allSettled(jobEntries.map((entry) => readJobUnsafe(entry.name)))
+  const jobs = []
+  for (const [index, record] of records.entries()) {
+    if (record.status === 'fulfilled') {
+      if (record.value) jobs.push(record.value)
+    } else {
+      console.error(`[Style Shelf] Skipping unreadable job record ${jobEntries[index].name}: ${record.reason?.message || record.reason}`)
+    }
+  }
+  return jobs.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
 }
 
 export async function markInterruptedJobs() {
@@ -217,16 +228,27 @@ export async function saveJobArtifact(id, sourcePath, mime, turnId = '') {
     if (!hasImageSignature(await readFile(canonicalSource))) throw new Error('invalid_artifact_image')
     const artifacts = current.artifacts || []
     const extension = extname(sourcePath).toLowerCase() || '.png'
-    const filename = `result-${String(artifacts.length + 1).padStart(2, '0')}${extension}`
     const outputDir = paths.generatedDir
     await ensureStorageDirectory(outputDir, getGeneratedDir())
-    const target = join(outputDir, filename)
-    try {
-      if ((await lstat(target)).isSymbolicLink()) throw new Error('unsafe_storage_path')
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error
+    let index = artifacts.length + 1
+    let filename
+    let target
+    while (true) {
+      filename = `result-${String(index).padStart(2, '0')}${extension}`
+      target = join(outputDir, filename)
+      try {
+        if ((await lstat(target)).isSymbolicLink()) throw new Error('unsafe_storage_path')
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error
+      }
+      try {
+        await copyFile(sourcePath, target, constants.COPYFILE_EXCL)
+        break
+      } catch (error) {
+        if (error.code !== 'EEXIST') throw error
+        index += 1
+      }
     }
-    await copyFile(sourcePath, target)
     const turn = turnId ? (current.turns || []).find((item) => item.id === turnId) : null
     const artifact = { filename, path: target, mime: mime || 'image/png', size: source.size, createdAt: new Date().toISOString(), ...(turnId ? { turnId } : {}), ...(turn ? { turnIndex: turn.index } : {}) }
     return writeJob({ ...current, artifacts: [...artifacts, artifact], updatedAt: new Date().toISOString() })

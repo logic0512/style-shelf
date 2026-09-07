@@ -56,19 +56,19 @@
 
 ### 下载桌面版
 
-**当前纯工作台源码为 0.2.2，尚未发布对应安装包。最新 Release 仍为 0.2.0，包含旧版内置内容；需要空白工作台请从源码运行。**
+当前版本为 **0.2.3 纯工作台**：安装后从空白目录开始，不内置 Skill、Prompt 或样例图片。
 
 前往 [最新 Release](https://github.com/logic0512/style-shelf/releases/latest)，选择对应系统：
 
-- macOS：`mac-universal.dmg`，同时支持 Intel 与 Apple 芯片。
-- Windows：`win-x64.exe`。
-- Linux：`linux-x86_64.AppImage`。
+- macOS：`Style-Shelf-0.2.3-mac-universal.dmg`，同时支持 Intel 与 Apple 芯片。
+- Windows：`Style-Shelf-0.2.3-win-x64.exe`。
+- Linux：`Style-Shelf-0.2.3-linux-x86_64.AppImage`。
 
 当前安装包尚未签名或公证。macOS 可能需要在“系统设置 → 隐私与安全性”中允许打开，Windows 可能显示 SmartScreen 提示。
 
 ### 从源码运行
 
-需要 Node.js `20.19+` 或 `22.12+`：
+需要 Node.js `22.12+`：
 
 ```bash
 git clone https://github.com/logic0512/style-shelf.git
@@ -95,7 +95,7 @@ npm run desktop
 
 - 需要本机安装并登录 Codex，且当前账户具有可用的生图能力。
 - Style Shelf 保存 Job、来源引用、输入副本和结果文件，不保存 Codex 登录凭据。
-- v0.2.0 的 Prompt 流程已接入 Codex 执行路径。
+- Skill 与 Prompt 流程均已接入 Codex 执行路径。
 
 ### WorkBuddy（可选）
 

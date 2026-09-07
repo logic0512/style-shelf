@@ -12,6 +12,20 @@ const INSTALLER = join(CODEX_HOME, 'skills', '.system', 'skill-installer', 'scri
 const LISTER = join(CODEX_HOME, 'skills', '.system', 'skill-installer', 'scripts', 'list-skills.py')
 const SKILL_ID = /^[a-z0-9][a-z0-9._-]{1,119}$/
 
+async function requireInstallerScript(path) {
+  try {
+    await new Promise((resolve, reject) => access(path, constants.R_OK, (error) => error ? reject(error) : resolve()))
+  } catch {
+    throw new Error('skill_installer_unavailable')
+  }
+}
+
+export async function describeSkillInstaller() {
+  const [installer, lister] = await Promise.all([INSTALLER, LISTER].map((path) => new Promise((resolve) => access(path, constants.R_OK, (error) => resolve(!error)))))
+  if (!installer) return { state: 'unavailable', message: 'Codex system installer not found', nameLookup: false }
+  return { state: 'ready', message: lister ? 'Codex system installer available' : 'GitHub URL installation available; name lookup unavailable', nameLookup: lister }
+}
+
 function runPython(script, args, timeoutMs = 180_000) {
   return new Promise((resolve, reject) => {
     const python = process.platform === 'win32' ? 'python' : 'python3'
@@ -40,6 +54,7 @@ function parseSource(source) {
   }
   let url
   try { url = new URL(value) } catch { throw new Error('invalid_github_source') }
+  if (url.username || url.password) throw new Error('invalid_github_source')
   if (url.hostname !== 'github.com') throw new Error('only_github_sources_supported')
   let rawPath
   try { rawPath = decodeURIComponent(value.replace(/^https?:\/\/github\.com/i, '').split(/[?#]/, 1)[0]) } catch { throw new Error('invalid_github_source') }
@@ -184,6 +199,7 @@ export async function installSkill(source) {
   const parsed = parseSource(source)
   let skillId = parsed.name
   if (parsed.url) {
+    await requireInstallerScript(INSTALLER)
     skillId = parsed.path === '.' ? parsed.url.split('/').filter(Boolean).at(-1) : parsed.path.split('/').filter(Boolean).at(-1)
     if (!SKILL_ID.test(skillId)) throw new Error('invalid_skill_name')
     await runPython(INSTALLER, ['--url', parsed.url, '--path', parsed.path])
@@ -192,6 +208,8 @@ export async function installSkill(source) {
     try {
       await new Promise((resolve, reject) => access(existingPath, constants.R_OK, (error) => error ? reject(error) : resolve()))
     } catch {
+      await requireInstallerScript(LISTER)
+      await requireInstallerScript(INSTALLER)
       const listed = JSON.parse((await runPython(LISTER, ['--format', 'json'])).stdout)
       if (!listed.some((item) => item.name === skillId)) throw new Error('skill_name_not_found')
       await runPython(INSTALLER, ['--repo', 'openai/skills', '--path', `skills/.curated/${skillId}`])

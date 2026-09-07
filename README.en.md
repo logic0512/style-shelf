@@ -56,19 +56,19 @@ Browse and filter your work. Gallery crops are saved separately from the origina
 
 ### Download the desktop app
 
-**The workbench-only source is 0.2.2; matching installers have not been published yet. The latest release is still 0.2.0 and contains older bundled content. Run from source for an empty workbench.**
+The current release is the **0.2.3 workbench-only edition**. New installs start empty, with no bundled Skills, Prompts, or sample images.
 
 Open the [latest release](https://github.com/logic0512/style-shelf/releases/latest) and choose your platform:
 
-- macOS: `mac-universal.dmg` for both Intel and Apple silicon.
-- Windows: `win-x64.exe`.
-- Linux: `linux-x86_64.AppImage`.
+- macOS: `Style-Shelf-0.2.3-mac-universal.dmg` for both Intel and Apple silicon.
+- Windows: `Style-Shelf-0.2.3-win-x64.exe`.
+- Linux: `Style-Shelf-0.2.3-linux-x86_64.AppImage`.
 
 Current installers are unsigned and not notarized. macOS may require **System Settings → Privacy & Security → Open Anyway**, and Windows may show a SmartScreen warning.
 
 ### Run from source
 
-Requires Node.js `20.19+` or `22.12+`:
+Requires Node.js `22.12+`:
 
 ```bash
 git clone https://github.com/logic0512/style-shelf.git
@@ -95,7 +95,7 @@ npm run desktop
 
 - Requires an installed and signed-in Codex runtime with image-generation access.
 - Style Shelf stores Jobs, source references, input copies, and result files; it never stores Codex login credentials.
-- The v0.2.0 Prompt flow is connected to the Codex execution path.
+- Both Skill and Prompt flows use the Codex execution path.
 
 ### WorkBuddy (optional)
 

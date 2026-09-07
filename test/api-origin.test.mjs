@@ -22,4 +22,7 @@ test('production browser URLs follow the page port; desktop bridge takes priorit
   globalThis.fetch = async () => { calls++; return { ok: false, status: 500 } }
   await assert.rejects(web.loadSkillCatalog(), /local_api_500/)
   assert.equal(calls, 1, 'Failed API must not silently load a default catalog')
+
+  globalThis.fetch = async () => ({ ok: false, status: 400, json: async () => ({ error: 'invalid_skill_manifest' }) })
+  await assert.rejects(web.loadSkillCatalog(), /invalid_skill_manifest/)
 })

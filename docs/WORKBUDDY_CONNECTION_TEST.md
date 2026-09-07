@@ -8,7 +8,7 @@
 
 ## 1. 测试前提
 
-- macOS、Windows、Linux 任一系统，Node.js 20.19+ 或 22.12+。
+- macOS、Windows、Linux 任一系统，Node.js 22.12+。
 - WorkBuddy/CodeBuddy 已安装，并且可以在终端启动本地 HTTP 服务。
 - 如果只做本阶段连接检查，不需要配置生图模型；需要实际出图时，才在 WorkBuddy 中配置模型供应商、API 地址、API Key 和模型名。密钥只放在 WorkBuddy 的配置中，不要写入 Style Shelf 仓库、`.env`、Job 或结果 JSON。
 - 当前机器上的 Codex Skill 目录可以没有这些内置 Skill；Style Shelf 的 `bootstrap` 会把仓库内 8 个“缺失的”随包 Skill 种入 `CODEX_HOME/skills`，不会覆盖已有 Skill。`heytea-doodle-poster` 是个人非商业版附带的维护者本地副本，保留作者来源和 `REDISTRIBUTION-NOTICE.md` 限制。
@@ -182,7 +182,7 @@ This guide checks whether WorkBuddy can access the Style Shelf repository, image
 
 ### 1. Requirements
 
-- macOS, Windows, or Linux with Node.js `20.19+` or `22.12+`.
+- macOS, Windows, or Linux with Node.js `22.12+`.
 - WorkBuddy/CodeBuddy installed and able to start a local HTTP service.
 - An image API is not required for the connection check. Real generation requires text-to-image and image-to-image providers configured inside WorkBuddy.
 - `npm run bootstrap` seeds the eight missing bundled Skills into `CODEX_HOME/skills` without overwriting existing Skills. `heytea-doodle-poster` is included only in the free personal/non-commercial package as a maintainer-local copy; retain its source and redistribution notice.

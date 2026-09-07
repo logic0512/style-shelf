@@ -2,7 +2,7 @@
 
 ## 中文
 
-需要 Node.js `20.19+` 或 `22.12+`：
+需要 Node.js `22.12+`：
 
 ```bash
 npm install
@@ -28,7 +28,7 @@ npm run pack:dir
 
 ## English
 
-Use Node.js `20.19+` or `22.12+`:
+Use Node.js `22.12+`:
 
 ```bash
 npm install

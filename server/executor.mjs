@@ -10,6 +10,9 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { getDataDir } from './storage.mjs'
 import { readJob, updateJob } from './jobs.mjs'
+import { getPrompt } from './prompts.mjs'
+import { getSkill } from './skills.mjs'
+import { assertJobInput } from './input-validation.mjs'
 import { cancelJobRun as cancelWorkBuddyRun, describeWorkBuddyExecutor, startJobRun as startWorkBuddyRun } from './workbuddy-runner.mjs'
 
 const selectionFile = join(getDataDir(), 'executor.json')
@@ -51,6 +54,26 @@ export function describeExecutor() {
 export async function startJobRun(jobId) {
   const job = await readJob(jobId)
   if (!job) return null
+  if (!['queued', 'failed', 'waiting_input'].includes(job.state)) return job
+  let source
+  try {
+    source = job.promptId ? await getPrompt(job.promptId) : await getSkill(job.skillId)
+    if (!source) throw new Error(job.promptId ? 'prompt_not_found' : 'skill_not_found')
+    if (job.skillId && source.installed === false) throw new Error('skill_not_found')
+    assertJobInput(job, source)
+  } catch (error) {
+    const now = new Date().toISOString()
+    await updateJob(jobId, {
+      state: 'failed',
+      progress: 0,
+      message: error.message || 'job_preflight_failed',
+      activeTurnId: null,
+      turns: (job.turns || []).map((turn) => turn.id === job.activeTurnId
+        ? { ...turn, state: 'failed', error: error.message || 'job_preflight_failed', updatedAt: now }
+        : turn),
+    })
+    throw error
+  }
   const executorId = job.promptId ? 'codex' : (['queued', 'failed', 'waiting_input'].includes(job.state) ? getExecutorId() : job.runner?.executor || getExecutorId())
   if (job.runner?.executor !== executorId && ['queued', 'failed', 'waiting_input'].includes(job.state)) {
     await updateJob(jobId, { runner: { ...(job.runner || {}), executor: executorId } })

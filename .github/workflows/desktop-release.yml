@@ -28,6 +28,9 @@ jobs:
           node-version: 22.12.x
           cache: npm
       - run: npm ci
+      - name: Verify release tag matches package version
+        if: github.ref_type == 'tag'
+        run: node -e "if (process.env.GITHUB_REF_NAME !== 'v' + require('./package.json').version) process.exit(1)"
       - run: npm run bootstrap
       - run: npm test
       - run: npm run ${{ matrix.command }}
@@ -39,6 +42,7 @@ jobs:
 
   release:
     name: Publish GitHub release
+    if: github.ref_type == 'tag'
     needs: package
     runs-on: ubuntu-latest
     permissions:

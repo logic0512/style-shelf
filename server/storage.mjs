@@ -181,7 +181,8 @@ export async function migrateLegacyStorage() {
       job = JSON.parse(await readFile(jobFile, 'utf8'))
     } catch (error) {
       if (error.code === 'ENOENT') continue
-      throw error
+      console.error(`[Style Shelf] Skipping unreadable legacy job record ${id}: ${error.message || error}`)
+      continue
     }
     const paths = getJobPaths(id)
     const inputRoot = await ensureStorageDirectory(paths.inputDir, uploadsDir)
