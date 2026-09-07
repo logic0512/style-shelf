@@ -1,14 +1,74 @@
-# Style Shelf
+<p align="center">
+  <img src="assets/readme/hero.svg" width="100%" alt="Style Shelf: a local workbench for browsing, running, and saving image Skills and Prompts">
+</p>
 
-[中文](README.md)
+<p align="center">
+  <a href="#see-it-in-use">See it in use</a> · <a href="#run-from-source">Get started</a> · <a href="README.md">中文</a>
+</p>
 
-A local-first image workbench for user-imported Skills, user-created Prompts, jobs, and image collections.
+Collect the image workflows you like. Choose a style, bring a photo or an idea, and keep the results in your own local gallery.
 
-**Starting with 0.2.2, no Skills, Prompt templates, sample images, or preset style catalog are included. A new installation starts empty. Existing user data is preserved.**
+## See it in use
 
-## Get started
+These are real screenshots of the maintainer's configured local workbench. **The Skills, Prompts, and artwork shown are demonstration content, not bundled features. New installations start empty.**
 
-Requires Node.js 20.19+ or 22.12+.
+### 01 · Choose a style by its results
+
+Browse your imported Skills as visual cards, with previews, sources, and input requirements.
+
+![Configured local Skill shelf with real cover images](docs/images/workbench-skills.png)
+
+### 02 · Keep reusable Prompts close
+
+One photo, different expressions. Save and edit your own Prompts; show full covers or choose a crop.
+
+![Local Prompt shelf showing foil, frosted glass, blueprint, and geometric interpretations](docs/images/workbench-prompts.png)
+
+### 03 · Create in one workspace
+
+Provide an image, add instructions, choose a ratio, then continue editing the same job while retaining its results.
+
+![Creation workspace with image input, instructions, and style preview](docs/images/workbench-studio.png)
+
+### 04 · Keep the results locally
+
+Browse and filter your work. Gallery crops are saved separately from the original image.
+
+![Local gallery with textile, block, badge, and architectural image transformations](docs/images/workbench-gallery.png)
+
+## What Style Shelf does
+
+- **Find a style by its result** — browse covers and plain-language descriptions instead of remembering package names.
+- **Keep two mechanisms distinct** — Skills and Prompts have separate collections while sharing the creation workspace and gallery.
+- **Match the required input** — render image, text, multi-image, ratio, option, or guided-question inputs from the selected source.
+- **Keep the working history** — run local Jobs in parallel, retain every turn, and continue editing the same Job.
+- **Save work locally** — keep originals separate from `4:3` or `3:4` display crops; user data is never bundled into the installer.
+- **Manage Skills safely** — import from the Codex Skill directory or install from GitHub; removing a Skill from the workbench never deletes its source.
+
+## Workflow
+
+1. **Choose a source** — select a card from the Skill or Prompt collection.
+2. **Provide input** — upload an image, enter text, or provide both when required.
+3. **Run locally** — use Codex by default; WorkBuddy remains an optional backend.
+4. **Keep the result** — continue the current Job or publish a selected version to the local gallery.
+
+## Quick start
+
+### Download the desktop app
+
+**The workbench-only source is 0.2.2; matching installers have not been published yet. The latest release is still 0.2.0 and contains older bundled content. Run from source for an empty workbench.**
+
+Open the [latest release](https://github.com/logic0512/style-shelf/releases/latest) and choose your platform:
+
+- macOS: `mac-universal.dmg` for both Intel and Apple silicon.
+- Windows: `win-x64.exe`.
+- Linux: `linux-x86_64.AppImage`.
+
+Current installers are unsigned and not notarized. macOS may require **System Settings → Privacy & Security → Open Anyway**, and Windows may show a SmartScreen warning.
+
+### Run from source
+
+Requires Node.js `20.19+` or `22.12+`:
 
 ```bash
 git clone https://github.com/logic0512/style-shelf.git
@@ -18,23 +78,49 @@ npm run bootstrap
 npm run start
 ```
 
-Open http://127.0.0.1:4173. Bootstrap creates local directories and checks the environment; it does not install Skills. Import your own Skill or create a Prompt to begin. Covers support full-image display or cropping. Removing a Skill does not delete its original files.
+Open <http://127.0.0.1:4173>. `bootstrap` initializes local directories and runs diagnostics. It does not add Skills or Prompts; existing user data is preserved.
 
-Generation requires an installed and authenticated Codex runtime. WorkBuddy is optional and requires separate model configuration; see [integration notes](docs/WORKBUDDY_CONNECTION_TEST.md). No model or account is included.
+Useful commands:
 
 ```bash
+npm run doctor
 npm test
 npm run build
 npm run desktop
-npm run pack:dir
 ```
 
-## Distribution and data
+## Execution backends and boundaries
 
-The workbench-only version is currently available as source. Older releases and Git history may contain previously bundled content; this update does not rewrite history or remove older installers.
+### Codex (default)
 
-Uploads and generated images live under `~/Pictures/Style Shelf/`. Web indexes default to `.styleshelf-data/`; desktop indexes use the system user-data directory. See [.env.example](.env.example). Do not commit user data or credentials.
+- Requires an installed and signed-in Codex runtime with image-generation access.
+- Style Shelf stores Jobs, source references, input copies, and result files; it never stores Codex login credentials.
+- The v0.2.0 Prompt flow is connected to the Codex execution path.
 
-See [Contributing](CONTRIBUTING.md), [Privacy](docs/PRIVACY.md), and [Troubleshooting](docs/TROUBLESHOOTING.md).
+### WorkBuddy (optional)
 
-Application code is [MIT licensed](LICENSE). Imported content retains its own source terms. See [third-party notices](THIRD_PARTY_NOTICES.md).
+- Requires a separate local WorkBuddy HTTP service and an image-model API configured inside WorkBuddy.
+- The connection and result-ingestion boundary is present, but real end-to-end image generation has not been validated with a third-party image API.
+- See the [WorkBuddy connection guide](docs/WORKBUDDY_CONNECTION_TEST.md).
+
+Prompt templates are stored in `<data-dir>/prompts.json` without generating or modifying `SKILL.md`. The service binds to `127.0.0.1` by default. Installers contain no user images, Job history, `.env`, or model secrets. Repository screenshots are documentation only; they do not include importable Skills, Prompt bodies, or job data.
+
+## Local storage and privacy
+
+- Uploaded copies: `~/Pictures/Style Shelf/Uploads/`
+- Generated originals: `~/Pictures/Style Shelf/Generated/`
+- Internal Jobs and indexes: `.styleshelf-data/` in Web mode; the OS user-data directory in the packaged app.
+
+Paths can be overridden through `.env`; see [`.env.example`](.env.example). Never commit `.env`, login state, or API keys.
+
+## More documentation
+
+- [Contributing](CONTRIBUTING.md)
+- [Privacy and credential boundary](docs/PRIVACY.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Skill metadata rules](docs/SKILL_METADATA_RULES.md)
+- [WorkBuddy connection and reserved integration](docs/WORKBUDDY_CONNECTION_TEST.md)
+
+## License
+
+Style Shelf application code is licensed under the [MIT License](LICENSE). Third-party Skills remain governed by their original licenses and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
